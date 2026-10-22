@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Dokumentasi endpoint API DaetSys - Digital Asset &amp; Evidence Tracking System">
+    <title>Dokumentasi API DaetSys</title>
+    <style>
+        :root {
+            --daetys-accent: #0f766e;
+            --daetys-accent-soft: #ccfbf1;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .daetys-header {
+            flex: 0 0 auto;
+            background: linear-gradient(135deg, #0f172a 0%, #134e4a 100%);
+            color: #f8fafc;
+            padding: 18px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid var(--daetys-accent);
+        }
+
+        .daetys-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .daetys-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--daetys-accent);
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #ecfdf5;
+            flex: 0 0 auto;
+        }
+
+        .daetys-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 650;
+            letter-spacing: -0.01em;
+        }
+
+        .daetys-subtitle {
+            margin: 2px 0 0;
+            font-size: 12.5px;
+            color: #99f6e4;
+        }
+
+        .daetys-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .daetys-actions a,
+        .daetys-actions button {
+            font: inherit;
+            font-size: 12.5px;
+            font-weight: 550;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(153, 246, 228, 0.35);
+            background: rgba(153, 246, 228, 0.12);
+            color: #ccfbf1;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .daetys-actions a:hover,
+        .daetys-actions button:hover {
+            background: rgba(153, 246, 228, 0.24);
+            border-color: rgba(153, 246, 228, 0.6);
+        }
+
+        .daetys-guide {
+            flex: 0 0 auto;
+            background: #ecfdf5;
+            border-bottom: 1px solid #a7f3d0;
+            padding: 12px 24px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #134e4a;
+        }
+
+        .daetys-guide strong { color: #065f46; }
+
+        .daetys-guide ol {
+            margin: 6px 0 0;
+            padding-left: 20px;
+        }
+
+        .daetys-guide code {
+            background: #d1fae5;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #065f46;
+        }
+
+        .daetys-app {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+
+        .daetys-error {
+            display: none;
+            margin: 40px auto;
+            max-width: 620px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #dc2626;
+            border-radius: 10px;
+            padding: 20px 24px;
+            color: #7f1d1d;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .daetys-error h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .daetys-error code {
+            background: #fee2e2;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header class="daetys-header">
+        <div class="daetys-brand">
+            <div class="daetys-logo">DS</div>
+            <div>
+                <h1 class="daetys-title">Dokumentasi API DaetSys</h1>
+                <p class="daetys-subtitle">Digital Asset &amp; Evidence Tracking System &mdash; versi 1.0.0</p>
+            </div>
+        </div>
+        <div class="daetys-actions">
+            <button type="button" id="daetys-copy-spec">Salin URL Spec</button>
+            <a href="/docs/api.json" target="_blank" rel="noopener">Buka OpenAPI JSON</a>
+            <a href="/api/health" target="_blank" rel="noopener">Cek Health</a>
+        </div>
+    </header>
+
+    <section class="daetys-guide">
+        <strong>Cara memakai halaman ini:</strong>
+        <ol>
+            <li>Buka grup endpoint di menu kiri, lalu pilih endpoint yang ingin dicoba.</li>
+            <li>Scroll ke bagian <strong>Test Request</strong> — form parameter akan terisi otomatis sesuai skema.</li>
+            <li>Isi kolom <strong>Value</strong>, lalu tekan <strong>Send Request</strong> untuk melihat status, waktu respons, dan isi body.</li>
+            <li>Untuk endpoint terlindungi, masukkan token pada bagian <strong>Authentication</strong> di atas: klik <code>Bearer</code> lalu isi token hasil <code>POST /api/login</code>.</li>
+        </ol>
+    </section>
+
+    <div id="app" class="daetys-app"></div>
+
+    <div id="daetys-error" class="daetys-error">
+        <h2>Dokumentasi tidak dapat dimuat</h2>
+        <p id="daetys-error-message">
+            Gagal mengambil dokumen OpenAPI dari <code>/docs/api.json</code>. Pastikan aplikasi sedang berjalan
+            dan Anda memiliki akses ke dokumentasi API.
+        </p>
+    </div>
+
+    <script src="/api-docs/scalar.js"></script>
+    <script>
+        (function () {
+            const SPEC_URL = '/docs/api.json';
+
+            document.getElementById('daetys-copy-spec').addEventListener('click', function () {
+                const absolute = window.location.origin + SPEC_URL;
+                navigator.clipboard.writeText(absolute).then(function () {
+                    const button = document.getElementById('daetys-copy-spec');
+                    const original = button.textContent;
+                    button.textContent = 'Tersalin!';
+                    setTimeout(function () { button.textContent = original; }, 1500);
+                });
+            });
+
+            fetch(SPEC_URL, { headers: { 'Accept': 'application/json' } })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+
+                    return response.json();
+                })
+                .then(function (spec) {
+                    Scalar.createApiReference('#app', {
+                        url: SPEC_URL,
+                        contentType: 'application/json',
+                        theme: 'default',
+                        darkMode: false,
+                        layout: 'modern',
+                        showSidebar: true,
+                        hideModels: false,
+                        hideDownloadButton: false,
+                        hideTestRequestButton: false,
+                        hideSearch: false,
+                        defaultRequestBodyView: 'form',
+                        tryItCredentialsPolicy: 'omit',
+                        withDefaultFonts: 'false',
+                        authentication: {
+                            preferredSecurityScheme: 'http'
+                        },
+                        metaData: {
+                            'og:title': 'Dokumentasi API DaetSys',
+                            'og:description': 'Dokumentasi endpoint API DaetSys'
+                        },
+                        customCss: `
+                            .scalar-app {
+                                --scalar-color-accent: ${getComputedStyle(document.documentElement).getPropertyValue('--daetys-accent')};
+                            }
+                        `
+                    });
+                })
+                .catch(function (error) {
+                    document.getElementById('app').style.display = 'none';
+                    document.querySelector('.daetys-guide').style.display = 'none';
+
+                    const box = document.getElementById('daetys-error');
+                    box.style.display = 'block';
+
+                    document.getElementById('daetys-error-message').innerHTML =
+                        'Gagal mengambil dokumen OpenAPI dari <code>/docs/api.json</code> (' + error.message + '). '
+                        + 'Pastikan aplikasi sedang berjalan dan Anda memiliki akses ke dokumentasi API.';
+                });
+        })();
+    </script>
+</body>
+</html>

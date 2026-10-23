@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Web;
 
 use App\Enums\ActivityAction;
 use App\Enums\UserRole;
@@ -10,36 +10,26 @@ use App\Services\AuditService;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 
 /**
- * Sesi pengguna halaman dokumentasi API (cookie `daetsys_docs`).
+ * Sesi masuk halaman dokumentasi API — berbasis session Laravel
+ * (`session('docs_admin_id')`), bukan cookie custom.
  *
- * Alur: admin membuka `/docs/login` → POST /api/docs/login dengan
+ * Alur: admin membuka `/docs/login` → POST /docs/login dengan
  * email + password → backend memvalidasi lewat AuthService::attempt
- * (audit trail ikut tercatat), lalu menyetel cookie terenkripsi yang
- * bepergian otomatis bersama navigasi browser ke `/docs`.
- *
- * Cookie hanya dipakai untuk gerbang `EnsureDocsAccess` — token
- * bearer personal access token yang terbit sementara akan langsung
- * dicabut agar tidak meninggalkan kredensial menggantung.
+ * (jejak audit ikut tercatat), menyimpan id admin ke session, dan
+ * mengembalikan `redirect` yang dipakai halaman login menuju `/docs`.
  */
 class DocsAuthController extends Controller
 {
-    /** Nama cookie akses dokumentasi. */
-    public const COOKIE_NAME = 'daetsys_docs';
-
-    /** Masa berlaku cookie dalam menit. */
-    public const COOKIE_MINUTES = 120;
-
     public function __construct(
         private readonly AuthService $auth,
         private readonly AuditService $audit,
     ) {}
 
     /**
-     * POST /api/docs/login
+     * POST /docs/login
      */
     public function login(Request $request): JsonResponse
     {
@@ -53,8 +43,8 @@ class DocsAuthController extends Controller
         /** @var User $user */
         $user = $result['user'];
 
-        // Cookie docs tidak membutuhkan personal access token — cabut
-        // token yang baru saja terbit agar tidak menggantung.
+        // Sesi docs memakai session, bukan bearer token — cabut token
+        // yang baru saja terbit agar tidak menggantung.
         $tokenId = (int) Str::before($result['token'], '|');
         $user->tokens()->where('id', $tokenId)->delete();
 
@@ -71,27 +61,24 @@ class DocsAuthController extends Controller
             ], 403);
         }
 
-        $payload = json_encode([
-            'sub' => $user->id,
-            'exp' => now()->addMinutes(self::COOKIE_MINUTES)->timestamp,
-        ]);
+        $request->session()->put('docs_admin_id', $user->id);
 
         return response()->json([
             'message' => 'Login berhasil. Mengalihkan ke dokumentasi...',
-        ])->cookie(Cookie::make(
-            name: self::COOKIE_NAME,
-            value: $payload,
-            minutes: self::COOKIE_MINUTES,
-        ));
+            'redirect' => '/docs',
+        ]);
     }
 
     /**
-     * POST /api/docs/logout
+     * POST /docs/logout
      */
-    public function logout(): JsonResponse
+    public function logout(Request $request): JsonResponse
     {
+        $request->session()->forget('docs_admin_id');
+
         return response()->json([
             'message' => 'Sesi dokumentasi diakhiri.',
-        ])->withCookie(Cookie::forget(self::COOKIE_NAME, '/'));
+            'redirect' => '/',
+        ]);
     }
 }

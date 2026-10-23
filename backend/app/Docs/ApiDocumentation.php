@@ -74,30 +74,6 @@ final class ApiDocumentation
                 ),
                 'tags' => ['Autentikasi'],
             ],
-            'docs.login' => [
-                'summary' => 'Masuk untuk membuka dokumentasi',
-                'description' => self::description(
-                    'Memvalidasi kredensial admin untuk halaman dokumentasi API dan menyetel cookie '
-                    .'terenkripsi `daetsys_docs` yang akan otomatis dibawa browser pada navigasi ke `/docs`.',
-                    [
-                        'Rate limit: **5 percobaan per menit** per kombinasi email + IP.',
-                        'Hanya akun **admin aktif** yang diizinkan; role lain mendapat `403`.',
-                        'Cookie berlaku 120 menit sejak login (HttpOnly, SameSite=Lax).',
-                        'Kredensial salah memicu `422`, dan tercatat di jejak audit `auth.login_failed`.',
-                    ],
-                ),
-                'tags' => ['Autentikasi'],
-            ],
-            'docs.logout' => [
-                'summary' => 'Akhiri sesi dokumentasi',
-                'description' => self::description(
-                    'Menghapus cookie akses dokumentasi sehingga `/docs` kembali terproteksi.',
-                    [
-                        'Tidak memerlukan autentikasi; aman dipanggil kapan pun.',
-                    ],
-                ),
-                'tags' => ['Autentikasi'],
-            ],
             'login' => [
                 'summary' => 'Masuk dan obtain token bearer',
                 'description' => self::description(

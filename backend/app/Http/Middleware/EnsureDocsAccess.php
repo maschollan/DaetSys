@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Enums\UserRole;
-use App\Http\Controllers\Api\DocsAuthController;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -15,8 +14,9 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Dokumentasi memuat detail internal endpoint, sehingga pada production
  * hanya dapat dibuka oleh admin aktif melalui token Bearer Sanctum yang
- * valid (mis. via curl/Postman), atau seluruh publik bila
- * `SCRAMBLE_DOCS_PUBLIC=true` (opt-in eksplisit untuk demo).
+ * valid (mis. via curl/Postman), session masuk dari `/docs/login`
+ * (`docs_admin_id`), atau seluruh publik bila `SCRAMBLE_DOCS_PUBLIC=true`
+ * (opt-in eksplisit untuk demo).
  *
  * Permintaan dari IP lokal (127.0.0.1, ::1) diizinkan hanya di
  * environment `local` agar pengembangan tetap nyaman.
@@ -40,40 +40,17 @@ class EnsureDocsAccess
             return $next($request);
         }
 
-        if ($this->hasValidDocsSession($request)) {
+        // Sesi halaman dokumentasi: id admin tersimpan ke session oleh
+        // POST /docs/login; status akun selalu divalidasi ulang di sini
+        // agar sesi akun yang dinonaktifkan/diubah role-nya tetap terpangkas.
+        $docsUser = User::find((int) session('docs_admin_id'));
+
+        if ($docsUser?->hasRole(UserRole::Admin) && $docsUser->is_active) {
             return $next($request);
         }
 
         return response()->json([
             'message' => 'Dokumentasi API hanya untuk admin. Masuk terlebih dahulu di /docs/login.',
         ], 403);
-    }
-
-    /**
-     * Cookie sesi dokumentasi (terbit lewat /api/docs/login). Nilainya
-     * sudah didekripsi EncryptCookies; di sini cukup validasi isi, masa
-     * berlaku, dan status akun pemiliknya.
-     */
-    private function hasValidDocsSession(Request $request): bool
-    {
-        $payload = $request->cookie(DocsAuthController::COOKIE_NAME);
-
-        if (! is_string($payload)) {
-            return false;
-        }
-
-        $data = json_decode($payload, true);
-
-        if (! is_array($data) || ! isset($data['sub'], $data['exp'])) {
-            return false;
-        }
-
-        if ((int) $data['exp'] < now()->timestamp) {
-            return false;
-        }
-
-        $user = User::find((int) $data['sub']);
-
-        return $user?->hasRole(UserRole::Admin) && $user->is_active;
     }
 }

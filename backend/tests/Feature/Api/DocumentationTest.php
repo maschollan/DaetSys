@@ -27,6 +27,19 @@ it('serves the scalar asset for the documentation page', function () {
         ->assertHeader('content-type', 'application/javascript; charset=utf-8');
 });
 
+it('serves the landing page on the root route', function () {
+    config(['app.frontend_url' => 'https://frontend.example.dev']);
+
+    $response = $this->get('/');
+
+    $response->assertOk()
+        ->assertHeader('content-type', 'text/html; charset=UTF-8');
+
+    expect($response->getContent())
+        ->toContain('https://frontend.example.dev')
+        ->toContain('/docs');
+});
+
 it('serves the openapi document', function () {
     $admin = createUserWithRole('admin');
 

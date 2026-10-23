@@ -54,6 +54,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Halaman frontend (SPA) yang dipisah sebagai static site — dipakai
+    // oleh halaman landing `/` untuk tombol dan auto-redirect.
+    'frontend_url' => env('FRONTEND_URL', 'https://daetsys.onrender.com'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

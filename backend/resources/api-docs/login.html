@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="csrf-token" content="[[CSRF_TOKEN]]" />
 <title>Masuk — DaetSys API Docs</title>
 <link rel="icon" href="data:," />
 <style>
@@ -144,9 +145,13 @@
     button.disabled = true;
 
     try {
-      const response = await fetch('/api/docs/login', {
+      const response = await fetch('/docs/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
         body: JSON.stringify({
           email: document.getElementById('email').value,
           password: document.getElementById('password').value,
@@ -156,7 +161,7 @@
       const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        window.location.href = '/docs';
+        window.location.href = data.redirect || '/docs';
         return;
       }
 

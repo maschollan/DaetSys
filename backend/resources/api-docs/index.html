@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="Dokumentasi endpoint API DaetSys - Digital Asset &amp; Evidence Tracking System">
+<meta name="csrf-token" content="[[CSRF_TOKEN]]">
     <title>Dokumentasi API DaetSys</title>
     <style>
         :root {
@@ -168,6 +169,7 @@
             <button type="button" id="daetys-copy-spec">Salin URL Spec</button>
             <a href="/docs/api.json" target="_blank" rel="noopener">Buka OpenAPI JSON</a>
             <a href="/api/health" target="_blank" rel="noopener">Cek Health</a>
+            <button type="button" id="daetys-logout">Keluar</button>
         </div>
     </header>
 
@@ -204,6 +206,26 @@
                     button.textContent = 'Tersalin!';
                     setTimeout(function () { button.textContent = original; }, 1500);
                 });
+            });
+
+            document.getElementById('daetys-logout').addEventListener('click', function () {
+                const button = document.getElementById('daetys-logout');
+                button.disabled = true;
+                button.textContent = 'Keluar...';
+
+                // Akhiri sesi dokumentasi; backend menghapus session
+                // `docs_admin_id` lalu halaman dimulai ulang ke landing `/`.
+                fetch('/docs/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                })
+                    .catch(function () { /* sesi juga otomatis berakhir; biarkan tetap keluar */ })
+                    .finally(function () {
+                        window.location.href = '/';
+                    });
             });
 
             fetch(SPEC_URL, { headers: { 'Accept': 'application/json' } })

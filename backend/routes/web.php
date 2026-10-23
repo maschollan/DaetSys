@@ -1,11 +1,25 @@
 <?php
 
+use App\Http\Controllers\Web\DocsAuthController;
 use App\Http\Middleware\EnsureDocsAccess;
+use App\Support\StaticPage;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Halaman landing (`/`)
+|--------------------------------------------------------------------------
+|
+| Halaman navigasi sederhana: menghitung mundur lalu otomatis mengalihkan
+| ke frontend (dikonfigurasi `FRONTEND_URL`), dengan tombol "Batal" agar
+| pengunjung tetap di halaman ini serta tombol ke frontend dan `/docs`.
+|
+*/
 Route::get('/', function () {
-    return view('welcome');
-});
+    return StaticPage::render('landing/index.html', [
+        '[[FRONTEND_URL]]' => (string) config('app.frontend_url'),
+    ]);
+})->name('home');
 
 /*
 |--------------------------------------------------------------------------
@@ -23,19 +37,35 @@ Route::get('/', function () {
 */
 
 Route::get('/docs', function () {
-    return response()->file(resource_path('api-docs/index.html'));
+    return StaticPage::render('api-docs/index.html', [
+        '[[CSRF_TOKEN]]' => csrf_token(),
+    ]);
 })
     ->middleware(['web', EnsureDocsAccess::class])
     ->name('api-docs');
 
 /*
  * Halaman masuk untuk dokumentasi: publik, hanya berisi formulir
- * yang mengirim kredensial ke /api/docs/login lalu mengalihkan
+ * yang mengirim kredensial ke POST /docs/login lalu mengalihkan
  * ke /docs. Gerbang data tetap di middleware EnsureDocsAccess.
  */
 Route::get('/docs/login', function () {
-    return response()->file(resource_path('api-docs/login.html'));
+    return StaticPage::render('api-docs/login.html', [
+        '[[CSRF_TOKEN]]' => csrf_token(),
+    ]);
 })->name('api-docs.login');
+
+/*
+ * Sesi masuk dokumentasi berbasis session Laravel. Pada environment
+ * `testing` middleware CSRF otomatis dilewati Laravel; di browser,
+ * halaman statis membawa tokennya lewat placeholder `[[CSRF_TOKEN]]`.
+ */
+Route::post('/docs/login', [DocsAuthController::class, 'login'])
+    ->middleware('throttle:login')
+    ->name('docs.login');
+
+Route::post('/docs/logout', [DocsAuthController::class, 'logout'])
+    ->name('docs.logout');
 
 /*
  * Aset pustaka Scalar yang dimuat oleh halaman /docs. Berkas disimpan di

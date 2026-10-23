@@ -1,82 +1,72 @@
 <?php
 
-use App\Http\Controllers\Api\DocsAuthController;
-
-it('sets a docs session cookie for admin login', function () {
+it('stores the docs admin session for the documentation page', function () {
     $admin = createUserWithRole('admin');
 
-    $this->postJson('/api/docs/login', [
+    $this->postJson('/docs/login', [
         'email' => $admin->email,
         'password' => 'password',
     ])->assertOk()
-        ->assertCookie(DocsAuthController::COOKIE_NAME);
+        ->assertJson(['redirect' => '/docs'])
+        ->assertSessionHas('docs_admin_id', $admin->id);
 });
 
 it('rejects docs login for non-admin', function () {
     $officer = createUserWithRole('officer');
 
-    $this->postJson('/api/docs/login', [
+    $this->postJson('/docs/login', [
         'email' => $officer->email,
         'password' => 'password',
     ])->assertForbidden()
-        ->assertCookieMissing(DocsAuthController::COOKIE_NAME);
+        ->assertSessionMissing('docs_admin_id');
 });
 
 it('rejects docs login with wrong credentials', function () {
     $admin = createUserWithRole('admin');
 
-    $this->postJson('/api/docs/login', [
+    $this->postJson('/docs/login', [
         'email' => $admin->email,
         'password' => 'wrongpass1',
-    ])->assertStatus(422);
+    ])->assertStatus(422)
+        ->assertSessionMissing('docs_admin_id');
 });
 
 it('rejects docs login for inactive admin accounts', function () {
     $admin = createUserWithRole('admin', ['is_active' => false]);
 
-    $this->postJson('/api/docs/login', [
+    $this->postJson('/docs/login', [
         'email' => $admin->email,
         'password' => 'password',
-    ])->assertForbidden();
+    ])->assertForbidden()
+        ->assertSessionMissing('docs_admin_id');
 });
 
-it('opens the docs page using the docs session cookie', function () {
+it('opens the documentation page using the docs admin session', function () {
     $admin = createUserWithRole('admin');
 
-    $this->postJson('/api/docs/login', [
-        'email' => $admin->email,
-        'password' => 'password',
-    ])->assertOk();
-
-    // Payload dikirim sebagai plaintext: inilah isian cookie asli
-    // (Enkripsi dilakukan runner test sebelum permintaan dikirim).
-    $payload = json_encode([
-        'sub' => $admin->id,
-        'exp' => now()->addMinutes(5)->timestamp,
-    ]);
-
-    // getJson() tidak mengirim cookie (hanya withCredentials() yang
-    // mengaktifkannya), jadi navigasi disimulasikan dengan get().
-    $this->withCookies([DocsAuthController::COOKIE_NAME => $payload])
-        ->get('/docs/api.json')
+    $this->withSession(['docs_admin_id' => $admin->id])
+        ->get('/docs')
         ->assertOk();
 });
 
-it('rejects an expired docs session cookie', function () {
+it('rejects a docs admin session for an unknown user', function () {
     $admin = createUserWithRole('admin');
 
-    $payload = json_encode([
-        'sub' => $admin->id,
-        'exp' => now()->subMinutes(5)->timestamp,
-    ]);
-
-    $this->withCookies([DocsAuthController::COOKIE_NAME => $payload])
-        ->get('/docs/api.json')
+    $this->withSession(['docs_admin_id' => $admin->id + 999])
+        ->get('/docs')
         ->assertForbidden();
 });
 
-it('clears the docs session cookie on logout', function () {
-    $this->postJson('/api/docs/logout')
+it('clears the docs admin session on logout', function () {
+    $admin = createUserWithRole('admin');
+
+    $this->postJson('/docs/login', [
+        'email' => $admin->email,
+        'password' => 'password',
+    ]);
+
+    $this->postJson('/docs/logout')
         ->assertOk()
-        ->assertCookieExpired(DocsAuthController::COOKIE_NAME);
+        ->assertJson(['redirect' => '/'])
+        ->assertSessionMissing('docs_admin_id');
 });

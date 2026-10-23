@@ -1,6 +1,6 @@
 <?php
 
-use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
+use App\Http\Middleware\EnsureDocsAccess;
 use Dedoc\Scramble\OpenApiVersion;
 use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
 
@@ -157,8 +157,15 @@ return [
 
     'middleware' => [
         'web',
-        RestrictedDocsAccess::class,
+        EnsureDocsAccess::class,
     ],
+
+    /*
+     * Saklar eksplisit untuk membuka dokumentasi ke publik (mis. demo).
+     * Default false: /docs membutuhkan token Bearer admin (lihat
+     * App\Http\Middleware\EnsureDocsAccess).
+     */
+    'public_docs' => env('SCRAMBLE_DOCS_PUBLIC', false),
 
     'extensions' => [],
 

@@ -57,8 +57,14 @@ USER www-data
 ENV PHP_CLI_SERVER_WORKERS=4
 
 # Warm-up cache saat boot (env var asli sudah tersedia di container),
-# lalu jalankan server di $PORT dari Render.
-CMD php artisan config:cache \
+# jalankan migrasi + seeder production sebagai jaring pengaman (sumber
+# kebenaran seharusnya `preDeployCommand` di render.yaml / dashboard
+# — bagi service yang dibuat manual tanpa preDeploy, blok ini membuat
+# skema tetap terpasang; migrate & seeder idempotent), lalu serve.
+CMD php artisan migrate --force \
+    && (php artisan db:seed --class=ProductionDatabaseSeeder --force \
+        || echo 'Seeder production dilewati — periksa BOOTSTRAP_ADMIN_* / koneksi DB.') \
+    && php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache \
     && exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"

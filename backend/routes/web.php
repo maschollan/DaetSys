@@ -1,6 +1,6 @@
 <?php
 
-use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
+use App\Http\Middleware\EnsureDocsAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,5 +25,5 @@ Route::get('/', function () {
 Route::get('/docs', function () {
     return response()->file(public_path('api-docs/index.html'));
 })
-    ->middleware(['web', RestrictedDocsAccess::class])
+    ->middleware(['web', EnsureDocsAccess::class])
     ->name('api-docs');

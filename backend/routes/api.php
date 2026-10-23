@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AssetCategoryController;
 use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DocsAuthController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReportController;
@@ -24,6 +25,13 @@ Route::get('/health', function () {
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login')
     ->name('api.login');
+
+// Sesi halaman dokumentasi: cookie akses docs, bukan bearer token
+Route::post('/docs/login', [DocsAuthController::class, 'login'])
+    ->middleware('throttle:login')
+    ->name('api.docs.login');
+Route::post('/docs/logout', [DocsAuthController::class, 'logout'])
+    ->name('api.docs.logout');
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'active.user'])->group(function (): void {
     // Sesi pengguna

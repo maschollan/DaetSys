@@ -23,7 +23,16 @@ Route::get('/', function () {
 */
 
 Route::get('/docs', function () {
-    return response()->file(public_path('api-docs/index.html'));
+    return response()->file(resource_path('api-docs/index.html'));
 })
     ->middleware(['web', EnsureDocsAccess::class])
     ->name('api-docs');
+
+/*
+ * Halaman masuk untuk dokumentasi: publik, hanya berisi formulir
+ * yang mengirim kredensial ke /api/docs/login lalu mengalihkan
+ * ke /docs. Gerbang data tetap di middleware EnsureDocsAccess.
+ */
+Route::get('/docs/login', function () {
+    return response()->file(resource_path('api-docs/login.html'));
+})->name('api-docs.login');

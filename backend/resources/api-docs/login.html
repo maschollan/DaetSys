@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Masuk — DaetSys API Docs</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --danger: #f87171;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 1rem;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem 1.75rem;
+  }
+
+  h1 {
+    margin: 0 0 .25rem;
+    font-size: 1.25rem;
+  }
+
+  p.lead {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: .875rem;
+    line-height: 1.5;
+  }
+
+  label {
+    display: block;
+    font-size: .8rem;
+    color: var(--muted);
+    margin: 0 0 .35rem;
+  }
+
+  input {
+    width: 100%;
+    padding: .65rem .75rem;
+    margin: 0 0 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0b1220;
+    color: var(--text);
+    font-size: .95rem;
+  }
+
+  input:focus {
+    outline: 2px solid var(--primary);
+    border-color: transparent;
+  }
+
+  button {
+    width: 100%;
+    padding: .7rem .75rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button:hover:enabled { background: var(--primary-hover); }
+  button:disabled { opacity: .6; cursor: not-allowed; }
+
+  .error {
+    display: none;
+    margin: 0 0 1rem;
+    padding: .6rem .75rem;
+    border-radius: 8px;
+    background: rgba(248, 113, 113, .12);
+    border: 1px solid rgba(248, 113, 113, .35);
+    color: var(--danger);
+    font-size: .85rem;
+  }
+
+  .footnote {
+    margin: 1.25rem 0 0;
+    color: var(--muted);
+    font-size: .78rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <h1>Dokumentasi API DaetSys</h1>
+    <p class="lead">Halaman ini memuat detail endpoint internal sehingga hanya untuk admin. Masuk dengan akun admin untuk melanjutkan.</p>
+
+    <p id="error" class="error" role="alert"></p>
+
+    <form id="form" novalidate>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <button id="submit" type="submit">Masuk</button>
+    </form>
+
+    <p class="footnote">DaetSys &mdash; Digital Asset &amp; Evidence Tracking System</p>
+  </main>
+
+<script>
+  const form = document.getElementById('form');
+  const button = document.getElementById('submit');
+  const errorBox = document.getElementById('error');
+
+  function showError(text) {
+    errorBox.textContent = text;
+    errorBox.style.display = 'block';
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorBox.style.display = 'none';
+    button.disabled = true;
+
+    try {
+      const response = await fetch('/api/docs/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        window.location.href = '/docs';
+        return;
+      }
+
+      if (data.message) {
+        const detail = data.errors ? ' ' + Object.values(data.errors).flat().join(' ') : '';
+        showError(data.message + detail);
+      } else {
+        showError('Login gagal. Coba lagi.');
+      }
+    } catch {
+      showError('Tidak dapat menghubungi server. Periksa koneksi.');
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

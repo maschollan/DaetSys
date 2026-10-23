@@ -70,8 +70,7 @@ it('documents every api route', function () {
 
     $registered = collect(Route::getRoutes())
         ->filter(fn ($route): bool => $route->getName() !== null
-            && str_starts_with($route->uri(), 'api/')
-            && ! str_starts_with($route->uri(), 'api/docs'))
+            && str_starts_with($route->uri(), 'api/'))
         ->map(fn ($route): string => normalizePath('/'.str_replace('api/', '', $route->uri())))
         ->unique()
         ->sort()

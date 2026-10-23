@@ -1,0 +1,42 @@
+# Git & meta repo
+.git
+.gitignore
+
+# Lingkungan — konfigurasi produksi hanya lewat Environment Variables Render
+.env
+.env.*
+!.env.example
+
+# Dependensi lokal (dibangun ulang di image; vendor Windows tidak kompatibel)
+vendor/
+node_modules/
+
+# Artefak build & cache lokal
+bootstrap/cache/*.php
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/scout.php
+storage/logs/*
+storage/pail/
+public/hot
+public/storage
+
+# Pengembangan & pengujian (tidak dibutuhkan di image produksi)
+tests/
+phpunit.xml
+.phpunit.result.cache
+.phpunit.cache/
+.phpactor.json
+auth.json
+TEST_REPORT.md
+.codex/
+.cursor/
+.idea/
+.vscode/
+.nova/
+.zed/
+
+# OS
+.DS_Store
+Thumbs.db

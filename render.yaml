@@ -1,0 +1,89 @@
+# =====================================================================
+# Blueprint Render — DaetSys (arsitektur split service)
+#
+#   daetsys-api  : Web Service Docker (Laravel)  ← file ini → backend/Dockerfile
+#   daetsys-web  : Static Site (SPA Vue)         ← build dari frontend/
+#   Database     : Supabase PostgreSQL (eksternal, tidak dikelola Render)
+#
+# Deploy lewat dashboard: Render → New → Blueprint → pilih repo ini.
+# Nilai `sync: false` akan diminta saat blueprint diterapkan — isi dari
+# backend/.env.production (checklist di header file tersebut).
+# =====================================================================
+services:
+  # ------------------------------------------------------------------
+  # API Laravel — Docker, health check /api/health
+  # ------------------------------------------------------------------
+  - type: web
+    name: daetsys-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    # preDeploy dijalankan di container rilis baru SEBELUM traffic dipindah.
+    # seeder production idempotent — aman diulang tiap deploy.
+    preDeployCommand: php artisan migrate --force && php artisan db:seed --class=ProductionDatabaseSeeder --force
+    envVars:
+      # --- nilai pasti ---
+      - key: APP_NAME
+        value: DaetSys
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_SSLMODE
+        value: require
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: PHP_CLI_SERVER_WORKERS
+        value: "4"
+      - key: BOOTSTRAP_ADMIN_NAME
+        value: Administrator
+      # --- nilai yang diisi user di Render dashboard (sync: false) ---
+      - key: APP_KEY                      # php artisan key:generate --show
+        sync: false
+      - key: APP_URL                      # https://daetsys-api.onrender.com
+        sync: false
+      - key: FRONTEND_URL                 # origin frontend utk CORS
+        sync: false
+      - key: SANCTUM_TOKEN_EXPIRATION     # masa berlaku token bearer (menit)
+        sync: false
+      # --- Supabase ---
+      - key: DB_HOST                      # db.<project-ref>.supabase.co
+        sync: false
+      - key: DB_PORT                      # 6543 (pooler) / 5432 (direct)
+        sync: false
+      - key: DB_DATABASE                  # postgres
+        sync: false
+      - key: DB_USERNAME                  # postgres.<project-ref>
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # --- Admin awal ---
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+
+  # ------------------------------------------------------------------
+  # Frontend SPA — Static Site Render (runtime Node bawaan, tanpa Docker)
+  # ------------------------------------------------------------------
+  - type: web
+    name: daetsys-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL            # https://daetsys-api.onrender.com/api
+        sync: false
+    # SPA fallback: file statis yang cocok dilayani lebih dulu,
+    # sedangkan path aplikasi (/assets, /transfers, dst.) dibawa ke index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

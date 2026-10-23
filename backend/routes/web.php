@@ -36,3 +36,15 @@ Route::get('/docs', function () {
 Route::get('/docs/login', function () {
     return response()->file(resource_path('api-docs/login.html'));
 })->name('api-docs.login');
+
+/*
+ * Aset pustaka Scalar yang dimuat oleh halaman /docs. Berkas disimpan di
+ * resources/api-docs (bukan public/) sehingga perlu dilayani lewat route,
+ * dan isinya hanya kode pustaka publik — bukan dokumen OpenAPI yang
+ * membutuhkan gerbang EnsureDocsAccess.
+ */
+Route::get('/api-docs/scalar.js', function () {
+    return response()->file(resource_path('api-docs/scalar.js'), [
+        'Content-Type' => 'application/javascript; charset=utf-8',
+    ]);
+})->name('api-docs.scalar');

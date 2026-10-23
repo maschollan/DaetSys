@@ -20,6 +20,13 @@ it('denies the documentation page to non admin', function () {
     $this->get('/docs')->assertForbidden();
 });
 
+it('serves the scalar asset for the documentation page', function () {
+    $response = $this->get('/api-docs/scalar.js');
+
+    $response->assertOk()
+        ->assertHeader('content-type', 'application/javascript; charset=utf-8');
+});
+
 it('serves the openapi document', function () {
     $admin = createUserWithRole('admin');
 

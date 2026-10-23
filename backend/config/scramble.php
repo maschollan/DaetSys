@@ -37,10 +37,13 @@ return [
      * Cache configuration for the generated OpenAPI document.
      *
      * Use `scramble:cache` to warm the cache and `scramble:clear` to invalidate it.
+     *
+     * `SCRAMBLE_DOC_CACHE_STORE=null` (dipakai environment `testing`)
+     * menonaktifkan cache agar test selalu menghasilkan dokumen segar.
      */
     'cache' => [
         'key' => 'scramble.openapi',
-        'store' => 'file',
+        'store' => env('SCRAMBLE_DOC_CACHE_STORE', 'file'),
     ],
 
     /*

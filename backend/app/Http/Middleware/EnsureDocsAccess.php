@@ -49,8 +49,15 @@ class EnsureDocsAccess
             return $next($request);
         }
 
-        return response()->json([
-            'message' => 'Dokumentasi API hanya untuk admin. Masuk terlebih dahulu di /docs/login.',
-        ], 403);
+        // Navigasi browser (Accept: text/html) diarahkan ke halaman masuk;
+        // fetch API — mis. Scalar mengambil /docs/api.json — tetap menerima
+        // 403 JSON yang ditampilkan sebagai pesan kegagalan muat dokumen.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Dokumentasi API hanya untuk admin. Masuk terlebih dahulu di /docs/login.',
+            ], 403);
+        }
+
+        return redirect()->route('api-docs.login');
     }
 }

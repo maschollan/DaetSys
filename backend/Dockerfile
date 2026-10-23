@@ -22,8 +22,8 @@ RUN apk add --no-cache libpq-dev \
 
 # --- Konfigurasi PHP produksi -----------------------------------------
 RUN { \
-        echo 'memory_limit = 256M'; \
-        echo 'max_execution_time = 60'; \
+        echo 'memory_limit = 512M'; \
+        echo 'max_execution_time = 120'; \
         echo 'post_max_size = 10M'; \
         echo 'upload_max_filesize = 10M'; \
         echo 'opcache.enable = 1'; \
@@ -61,10 +61,16 @@ ENV PHP_CLI_SERVER_WORKERS=4
 # kebenaran seharusnya `preDeployCommand` di render.yaml / dashboard
 # — bagi service yang dibuat manual tanpa preDeploy, blok ini membuat
 # skema tetap terpasang; migrate & seeder idempotent), lalu serve.
+#
+# `scramble:cache` memanaskan dokumen OpenAPI sekali di boot — request
+# `/docs/api.json` kemudian dibaca dari cache file, bukan generasi
+# statis-analisis berat per request (sebelumnya memicu matinya worker
+# PHP karena memori dan ditampilkan sebagai 502 oleh gateway Render).
 CMD php artisan migrate --force \
     && (php artisan db:seed --class=ProductionDatabaseSeeder --force \
         || echo 'Seeder production dilewati — periksa BOOTSTRAP_ADMIN_* / koneksi DB.') \
     && php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache \
+    && php artisan scramble:cache \
     && exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"

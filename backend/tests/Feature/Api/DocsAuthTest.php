@@ -54,7 +54,7 @@ it('rejects a docs admin session for an unknown user', function () {
 
     $this->withSession(['docs_admin_id' => $admin->id + 999])
         ->get('/docs')
-        ->assertForbidden();
+        ->assertRedirect(route('api-docs.login'));
 });
 
 it('clears the docs admin session on logout', function () {

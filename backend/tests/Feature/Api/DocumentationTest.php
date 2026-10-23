@@ -15,9 +15,9 @@ it('serves the interactive documentation page to admin', function () {
 it('denies the documentation page to non admin', function () {
     $officer = createUserWithRole('officer');
 
-    $this->actingAs($officer)->get('/docs')->assertForbidden();
+    $this->actingAs($officer)->get('/docs')->assertRedirect(route('api-docs.login'));
 
-    $this->get('/docs')->assertForbidden();
+    $this->get('/docs')->assertRedirect(route('api-docs.login'));
 });
 
 it('serves the scalar asset for the documentation page', function () {
@@ -171,7 +171,7 @@ it('groups endpoints by indonesian tag', function () {
 it('does not expose the documentation to an inactive account', function () {
     $admin = createUserWithRole('admin', ['is_active' => false]);
 
-    $this->actingAs($admin)->get('/docs')->assertForbidden();
+    $this->actingAs($admin)->get('/docs')->assertRedirect(route('api-docs.login'));
 });
 
 it('keeps the documentation page free of blade views', function () {

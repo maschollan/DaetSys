@@ -62,15 +62,19 @@ ENV PHP_CLI_SERVER_WORKERS=4
 # — bagi service yang dibuat manual tanpa preDeploy, blok ini membuat
 # skema tetap terpasang; migrate & seeder idempotent), lalu serve.
 #
-# `scramble:cache` memanaskan dokumen OpenAPI sekali di boot — request
-# `/docs/api.json` kemudian dibaca dari cache file, bukan generasi
-# statis-analisis berat per request (sebelumnya memicu matinya worker
-# PHP karena memori dan ditampilkan sebagai 502 oleh gateway Render).
+# `scramble:export` memanaskan dokumen OpenAPI menjadi berkas statis
+# sekali di boot — request `/docs/api.json` kemudian hanya membaca
+# berkas (lihat DocsServiceProvider). Generasi analisis statis berat
+# per request memakan puluhan detik di instance Render kecil dan dapat
+# mematikan worker PHP (tampil sebagai 502 gateway); export gagal di
+# boot tidak menyandera container — fallback generasi runtime tetap ada.
 CMD php artisan migrate --force \
     && (php artisan db:seed --class=ProductionDatabaseSeeder --force \
         || echo 'Seeder production dilewati — periksa BOOTSTRAP_ADMIN_* / koneksi DB.') \
     && php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache \
-    && php artisan scramble:cache \
+    && mkdir -p storage/app/api-docs \
+    && (php artisan scramble:export --path=storage/app/api-docs/openapi.json \
+        || echo 'Export OpenAPI gagal — /docs/api.json memakai generasi runtime.') \
     && exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"

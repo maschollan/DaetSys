@@ -31,6 +31,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="SCRAMBLE_DOC_CACHE_STORE" value="(null)"/>
+        <env name="SCRAMBLE_EXPORTED_DOCUMENT" value="(null)"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

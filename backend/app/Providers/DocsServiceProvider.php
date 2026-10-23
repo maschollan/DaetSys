@@ -48,13 +48,32 @@ class DocsServiceProvider extends ServiceProvider
      * Antarmuka dokumentasi disajikan oleh Scalar API Reference pada
      * `/docs` (lihat `routes/web.php`), sehingga route UI bawaan Scramble
      * yang bergantung CDN eksternal tidak perlu diaktifkan.
+     *
+     * Dokumen OpenAPI disajikan dari berkas hasil `php artisan
+     * scramble:export` yang dijalankan sekali di boot container
+     * (lihat Dockerfile). Generasi analisis statis Scramble berat —
+     * di instance Render kecil ia makan waktu puluhan detik dan
+     * berisiko mematikan worker PHP (terlihat sebagai 502 gateway)
+     * bila dijalankan per request, mis. saat dua fetch paralel dari
+     * halaman Scalar. Bila berkas export tidak ada (local dev, atau
+     * boot gagal), fallback ke generasi live bawaan Scramble.
      */
     private function exposeDocumentRoute(): void
     {
+        $exportedPath = config('scramble.serve_exported_document');
+
         Scramble::configure()->expose(
             ui: false,
             document: fn (Router $router, $action) => $router
-                ->get('docs/api.json', $action)
+                ->get('docs/api.json', function () use ($action, $exportedPath) {
+                    if (is_string($exportedPath) && is_file($exportedPath)) {
+                        return response()->file($exportedPath, [
+                            'Content-Type' => 'application/json',
+                        ]);
+                    }
+
+                    return app()->call($action);
+                })
                 ->name('scramble.docs.document'),
         );
     }

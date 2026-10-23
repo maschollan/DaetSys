@@ -47,6 +47,14 @@ return [
     ],
 
     /*
+     * Berkas statis hasil `php artisan scramble:export` yang disajikan oleh
+     * `/docs/api.json` (lihat DocsServiceProvider). Nilai null — dipakai
+     * environment `testing` — mematikan penyajian berkas sehingga test
+     * selalu menilai generasi live, bukan export yang mungkin basi.
+     */
+    'serve_exported_document' => env('SCRAMBLE_EXPORTED_DOCUMENT', storage_path('app/api-docs/openapi.json')),
+
+    /*
      * OpenAPI version of the resulting document.
      */
     'openapi_version' => OpenApiVersion::V3_1,

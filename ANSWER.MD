@@ -1,359 +1,74 @@
-# ANSWER.MD — Study Case: Digital Asset & Evidence Tracking System (DaetSys)
+# Technical Case Study: Digital Asset & Evidence Tracking System
 
-> **Repo:** <https://github.com/maschollan/DaetSys> — cabang utama `main`.
-> **Stack:** Laravel 13 (API-only, Sanctum) · Vue 3 Options API (SPA) · MySQL (local) / PostgreSQL Supabase (production) · Docker + Render.
-> **Kualitas:** 58 test feature hijau (298 assertions) — `composer test` / `php artisan test --compact`, semua PHP lolos `vendor/bin/pint`.
-> **Dokumentasi interaktif API:** `/docs` (Scalar) — hanya admin, dengan halaman masuk `/docs/login`.
+## Gambaran Sistem
 
----
+DaetSys adalah aplikasi web untuk mencatat barang milik organisasi, mengetahui lokasi barang, dan menelusuri perpindahannya. Aplikasi membantu menggantikan pencatatan yang tersebar di lembar kerja dan dokumen dengan riwayat yang dapat dicari.
 
-## Arsitektur ringkas
+Kode lengkap tersedia di [repositori DaetSys di GitHub](https://github.com/maschollan/DaetSys). Aplikasi menggunakan [Laravel untuk backend](https://github.com/maschollan/DaetSys/tree/main/backend), [Vue untuk antarmuka](https://github.com/maschollan/DaetSys/tree/main/frontend), dan database relasional. Konfigurasi lokal menggunakan MySQL; konfigurasi deployment produksi di repo menggunakan PostgreSQL.
 
-```
-Vue 3 SPA (frontend/) ──fetch JSON──▶ Laravel API (backend/)
-                                        ├─ Layer Controller  : tipis, hanya delegasi
-                                        ├─ Layer Service     : seluruh aturan bisnis
-                                        ├─ Layer FormRequest : validasi + whitelist filter
-                                        ├─ Layer Policy      : otorisasi per objek
-                                        └─ Layer Resource    : transformasi respons
-```
+### Cara kerja dan peran
 
-Prinsip yang dipegang di seluruh kode:
+Setiap barang memiliki kode dan QR unik. Petugas dapat mengajukan perpindahan barang. Admin meninjau permintaan, lalu proses serah terima dicatat. Petugas penerima mengonfirmasi penerimaan. Lokasi barang baru berubah setelah konfirmasi tersebut.
 
-- **Aturan bisnis tidak pernah tinggal di controller** — semua mutasi melewati `App\Services\*` sehingga bisa diuji dan dipakai ulang.
-- **Setiap mutasi kritis = transaksi database + `lockForUpdate` + audit trail** ([backend/app/Services/TransferService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L19-L29)).
-- **Tanpa data dummy** — seeder demo hanya aktif di environment `local` ([backend/app/Providers/AppServiceProvider.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Providers/AppServiceProvider.php)).
+- **Admin** mengelola pengguna dan data utama, serta meninjau permintaan perpindahan.
+- **Petugas** mencatat dan mencari barang, mengajukan perpindahan, serta melakukan serah terima sesuai tugasnya.
+- **Auditor** meninjau data dan riwayat tanpa mengubah data operasional.
 
----
+Hak akses diperiksa oleh backend. Contohnya, [middleware peran](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Middleware/EnsureRole.php#L17-L30) menolak tindakan yang tidak sesuai dengan akun, sedangkan [Policy transfer](https://github.com/maschollan/DaetSys/blob/main/backend/app/Policies/TransferPolicy.php#L32-L36) mencegah admin menyetujui permintaan perpindahannya sendiri.
 
-## 1. Fitur
+## Fitur utama
 
-### 1.1 Login & Role (Admin / Petugas / Auditor)
+- **Login dan peran:** route terlindungi memeriksa token serta status akun aktif ([route API](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php#L28-L33), [middleware akun aktif](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Middleware/EnsureUserIsActive.php#L18-L31)).
+- **Data barang:** kode aset dan nomor seri divalidasi agar tidak duplikat ([validasi aset](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/StoreAssetRequest.php#L20-L35)); indeks unik database menjadi pemeriksaan tambahan ([migrasi aset](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000005_create_assets_table.php#L15-L19)).
+- **QR barang:** token acak dibuat oleh [QrTokenService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/QrTokenService.php#L21-L28) dan dapat dipakai untuk mencari barang.
+- **Perpindahan:** alur pengajuan, persetujuan, serah terima, dan penerimaan dikelola oleh [TransferService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L40-L124).
+- **Riwayat dan laporan:** [AuditService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/AuditService.php#L41-L60) mencatat pengguna, barang atau transfer, waktu, dan perubahan. Kata sandi serta token disamarkan ([daftar nilai sensitif](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/AuditService.php#L21-L35)).
+- **Dashboard:** jumlah barang dihitung dengan agregasi database dan ringkasan disimpan dalam cache selama waktu yang dikonfigurasi ([DashboardService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/DashboardService.php#L26-L61)).
 
-Role disimpan sebagai enum, digerbang lewat middleware route-level + Policy per objek ([backend/app/Enums/UserRole.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Enums/UserRole.php#L5-L19)):
+## Skenario 1 — Dua petugas mengajukan perpindahan barang yang sama
 
-```php
-enum UserRole: string
-{
-    case Admin = 'admin';
-    case Officer = 'officer';
-    case Auditor = 'auditor';
-}
-```
+**Masalah:** dua permintaan bersamaan dapat mencoba memindahkan barang yang sama.
 
-Middleware gerbang route ([backend/app/Http/Middleware/EnsureRole.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Middleware/EnsureRole.php#L17-L30)) — manajemen pengguna hanya admin:
+**Solusi:** aplikasi mengunci catatan barang selama proses transaksi, memeriksa statusnya, lalu membuat transfer. Database juga memiliki indeks unik pada `active_asset_id` untuk membatasi satu transfer aktif per barang.
 
 ```php
-public function handle(Request $request, Closure $next, string ...$roles): Response
-{
-    $user = $request->user();
-    $userRole = $user?->role?->name;
+// Bagian ini dijalankan di dalam transaksi pengajuan transfer.
+$asset = Asset::query()->lockForUpdate()->find($assetId);
 
-    if ($userRole === null || ! in_array($userRole, $roles, true)) {
-        return response()->json(['message' => 'This action is unauthorized.'], 403);
-    }
-
-    return $next($request);
-}
-```
-
-Policy dipanggil dari `authorize()` FormRequest, sehingga request yang tidak sah ditolak **sebelum** menyentuh service ([backend/app/Http/Requests/ApproveTransferRequest.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/ApproveTransferRequest.php#L9-L12)):
-
-```php
-public function authorize(): bool
-{
-    return $this->user()?->can('approve', $this->route('transfer')) ?? false;
-}
-```
-
-Aliasan middleware `role`, `active.user`, dan `idempotent` didaftarkan di kernel ([backend/bootstrap/app.php](https://github.com/maschollan/DaetSys/blob/main/backend/bootstrap/app.php#L33-L41)), dan semua route API terlindungi melewati grup `auth:sanctum` + `active.user` ([backend/routes/api.php](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php#L28)):
-
-Otorisasi per objek memakai Policy — contoh: **approval hanya admin dan tidak boleh transfer milik sendiri** ([backend/app/Policies/TransferPolicy.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Policies/TransferPolicy.php#L32-L36)):
-
-```php
-public function approve(User $user, Transfer $transfer): bool
-{
-    return $user->hasRole(UserRole::Admin)
-        && $transfer->requested_by !== $user->id;
-}
-```
-
-Akun nonaktif otomatis dicabut tokennya di setiap request API ([backend/app/Http/Middleware/EnsureUserIsActive.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Middleware/EnsureUserIsActive.php#L18-L31)).
-
-### 1.2 Asset Management
-
-CRUD aset lewat service dengan transaksi + audit otomatis untuk setiap perubahan ([backend/app/Services/AssetService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/AssetService.php#L61-L98)):
-
-```php
-public function update(User $actor, Asset $asset, array $data, ?Request $request = null): Asset
-{
-    return DB::transaction(function () use ($actor, $asset, $data, $request): Asset {
-        $locked = Asset::query()->lockForUpdate()->find($asset->id);
-
-        if ($locked->status === AssetStatus::InTransfer) {
-            throw BusinessRuleException::conflict('Asset is currently in transfer and cannot be modified.');
-        }
-
-        $oldValues = $this->auditableAttributes($locked);
-        $locked->fill($data)->save();
-
-        $this->audit->log(
-            ActivityAction::AssetUpdated,
-            user: $actor,
-            asset: $locked,
-            oldValues: $oldValues,
-            newValues: $this->auditableAttributes($locked),
-            request: $request,
-        );
-        ...
-```
-
-### 1.3 QR Code Tracking
-
-Setiap aset punya `qr_token` acak 40 karakter (tidak dapat ditebak, unik di level database) — pembuatannya di [backend/app/Services/QrTokenService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/QrTokenService.php#L21-L28):
-
-```php
-public function generate(): string
-{
-    do {
-        $token = Str::random(self::TOKEN_LENGTH);
-    } while (Asset::withTrashed()->where('qr_token', $token)->exists());
-
-    return $token;
-}
-```
-
-Kekhasan token dijaga di level database dengan unique index ([backend/database/migrations/2026_10_22_000005_create_assets_table.php](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000005_create_assets_table.php#L15-L19)):
-
-```php
-$table->string('asset_code')->unique();
-$table->string('qr_token', 64)->unique();
-$table->string('serial_number')->nullable()->unique();
-```
-
-Penggunaannya sebagai endpoint terbuka untuk deteksi QR — [backend/routes/api.php](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php#L45):
-
-```php
-Route::get('/assets/qr/{qr_token}', [AssetController::class, 'byQrToken']);
-```
-
-### 1.4 Transfer Barang (dengan alur persetujuan)
-
-Alur mesin-status transfer:
-
-```
-pending → approved → handover → completed
-   ↘ rejected      ↘ cancelled
-```
-
-Perpindahan status dikawal aturan `enum` transisi yang sah ([backend/app/Services/TransferService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L423-L437)):
-
-```php
-private function assertTransition(Transfer $transfer, TransferStatus $target): void
-{
-    $current = $transfer->status;
-
-    if (! $current->canTransitionTo($target)) {
-        throw BusinessRuleException::unprocessable(
-            sprintf('Transfer cannot move from %s to %s.', $current->value, $target->value),
-            ['status' => [$current->value]]
-        );
-    }
-}
-```
-
-Alur lengkap: **request → approve/reject → handover → receive**, setiap langkah dilindungi `lockForUpdate` + audit ([backend/app/Services/TransferService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L40-L124)) — dan lokasi aset **hanya berubah di titik penerimaan** ([receive, L340-343](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L340-L349)):
-
-```php
-$asset->update([
-    'location_id' => $locked->to_location_id,
-    'status' => AssetStatus::Available->value,
-]);
-
-$locked->update([
-    'status' => TransferStatus::Completed->value,
-    'completed_at' => now(),
-    'active_asset_id' => null,
-]);
-```
-
-### 1.5 Activity Log
-
-Satu pintu pencatatan audit: [backend/app/Services/AuditService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/AuditService.php#L41-L61) — menyimpan `user_id`, `asset_id`, `transfer_id`, `action`, `old_values`, `new_values`, `ip_address`, `user_agent`, dan waktu; nilai sensitif di-**redacted**:
-
-```php
-public function log(ActivityAction $action, ?User $user = null, ?Asset $asset = null,
-                    ?Transfer $transfer = null, ?array $oldValues = null,
-                    ?array $newValues = null, ?Request $request = null): ActivityLog
-{
-    return ActivityLog::create([
-        'user_id' => $user?->id,
-        'asset_id' => $asset?->id,
-        'transfer_id' => $transfer?->id,
-        'action' => $action->value,
-        'old_values' => $oldValues === null ? null : $this->scrub($oldValues),
-        'new_values' => $newValues === null ? null : $this->scrub($newValues),
-        'ip_address' => $request?->ip(),
-        'user_agent' => $request?->userAgent(),
-        'created_at' => now(),
-    ]);
-}
-```
-
-### 1.6 Dashboard
-
-Angka dashboard selalu dari **agregasi SQL** (bukan loop N+1) dan di-**cache hingga 60 detik** dengan invalidasi cepat setiap kali aset/transfer berubah — [backend/app/Services/DashboardService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/DashboardService.php#L26-L62):
-
-```php
-public function summary(): array
-{
-    return Cache::remember(
-        self::CACHE_KEY,
-        (int) config('daetsys.dashboard_cache_ttl', 60),
-        fn (): array => $this->buildSummary(),
-    );
+if ($asset->status !== AssetStatus::Available) {
+    throw BusinessRuleException::conflict('Asset is not available for transfer.');
 }
 
-public function buildSummary(): array
-{
-    $assetsByStatus = Asset::query()
-        ->selectRaw('status, COUNT(*) as aggregate')
-        ->groupBy('status')
-        ->pluck('aggregate', 'status');
-    ...
-}
+// Transfer aktif dibuat setelah pemeriksaan ini.
 ```
 
-Pembagian per lokasi juga agregat satu query ([assetsByLocation](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/DashboardService.php#L67-L81)).
+Contoh ini berasal dari [TransferService, pengajuan transfer](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L47-L103). Pengaman database ada di [migrasi transfers](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000006_create_transfers_table.php#L23-L37).
 
-### 1.7 Reporting
+**Hasil yang diharapkan:** hanya satu transfer aktif yang dapat tercatat untuk satu barang. Permintaan yang bertabrakan harus ditolak sebagai konflik. Catatan teknis: penerjemahan error indeks unik di kode saat ini mengenali kode MySQL; pada konfigurasi PostgreSQL produksi, status respons konflik `409` perlu dipastikan dan disesuaikan.
 
-Laporan disusun dengan paginasi `paginate` dan filter **whitelisted** — input user tidak pernah diteruskan langsung menjadi query ([backend/app/Services/ReportService.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/ReportService.php#L23-L40)):
+## Skenario 2 — Petugas mencoba mengubah lokasi langsung lewat API
+
+**Masalah:** perubahan lokasi langsung dapat melewati persetujuan dan tidak memiliki catatan serah terima.
+
+**Solusi:** Form Request melarang `location_id` pada endpoint pembaruan aset. Jika field itu dikirim, request ditolak dan upaya tersebut dicatat.
 
 ```php
-public function assets(array $filters): LengthAwarePaginator
-{
-    $query = Asset::query()
-        ->with(['category:id,name', 'location:id,code,name'])
-        ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
-        ->when($filters['location_id'] ?? null, fn ($q, $v) => $q->where('location_id', $v))
-        ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
-        ->when($filters['date_from'] ?? null, fn ($q, $v) => $q->whereDate('acquisition_date', '>=', $v))
-        ->when($filters['date_to'] ?? null, fn ($q, $v) => $q->whereDate('acquisition_date', '<=', $v));
-    ...
-    return $query->paginate($filters['per_page'] ?? 25)->withQueryString();
-}
+return [
+    'category_id' => ['sometimes', 'integer', 'exists:asset_categories,id'],
+    'location_id' => ['prohibited'],
+    'asset_code' => ['sometimes', 'string', 'max:100', /* validasi unik */],
+];
 ```
 
-### 1.8 Data Validation (anti-duplikat)
+Lihat [aturan validasi UpdateAssetRequest](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/UpdateAssetRequest.php#L29-L61) dan [pencatatan upaya perubahan lokasi](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/UpdateAssetRequest.php#L64-L83).
 
-Duplikasi ditutup dari dua sisi — validasi dan database. Cek unik pada model (contoh: kode aset, serial number) ([backend/app/Http/Requests/StoreAssetRequest.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/StoreAssetRequest.php#L25-L28)):
+**Hasil yang diharapkan:** lokasi hanya berubah melalui proses transfer yang sah, dan upaya melewati proses itu dapat ditinjau di riwayat audit.
 
-```php
-'asset_code' => ['required', 'string', 'max:100', 'unique:assets,asset_code'],
-'serial_number' => ['sometimes', 'nullable', 'string', 'max:100', 'unique:assets,serial_number'],
-```
+## Skenario 3 — Auditor perlu menelusuri barang yang hilang
 
-dan **unique index di level database** sebagai pengaman terakhir ([migrasi aset](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000005_create_assets_table.php#L15-L19)) — bila dua petugas menyimpan kode aset yang sama pada saat bersamaan, database menolak salah satunya.
+**Masalah:** lokasi barang telah berubah beberapa kali dan perlu diketahui siapa yang mengajukan, menyetujui, menyerahkan, serta menerima barang.
 
----
-
-## 2. Skenario Sulit
-
-### Scenario 1 — Concurrent Update (dua petugas memindahkan barang sama bersamaan)
-
-**Solusi tiga lapis:** pessimistic lock → guard aplikasi → UNIQUE index database.
-
-Dalam transaksi, baris aset **dikunci** terlebih dahulu — request kedua sampai akan **menunggu** lalu melihat status aset berubah:
-
-```php
-// TransferService::request (L48-L102)
-return DB::transaction(function () use ($requester, $assetId, $toLocationId, ...): Transfer {
-    $asset = Asset::query()->lockForUpdate()->find($assetId);
-
-    if ($asset->status !== AssetStatus::Available) {
-        throw BusinessRuleException::conflict('Asset is not available for transfer. ...');
-    }
-    ...
-    // Guard aplikasi, tambahan pengaman
-    if (Transfer::query()->where('active_asset_id', $asset->id)->exists()) {
-        throw BusinessRuleException::conflict('Asset already has an active transfer.');
-    }
-```
-
-Penjaga **terakhir di level database** — UNIQUE index ([backend/database/migrations/2026_10_22_000006_create_transfers_table.php](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000006_create_transfers_table.php#L23-L31)):
-
-```php
-// Kolom ini berisi `asset_id` selama transfer masih aktif
-// (pending / approved / handover) dan NULL saat transfer selesai —
-// UNIQUE index memastikan database yang menolak permintaan kedua.
-$table->unsignedBigInteger('active_asset_id')->nullable()->unique();
-```
-
-Pelanggaran UNIQUE itu diterjemahkan menjadi 409 Conflict yang informatif, bukan error mentah ([TransferService::translateUniqueViolation](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L442-L454)):
-
-```php
-private function translateUniqueViolation(QueryException $exception): \Throwable
-{
-    if ($sqlState === '23000' && $driverCode === 1062) {
-        return BusinessRuleException::conflict('Asset already has an active transfer. Please reload and try again.');
-    }
-    return $exception;
-}
-```
-
-> **Bukti tes:** [tests/Feature/Workflow/TransferWorkflowTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Workflow/TransferWorkflowTest.php).
-
-### Scenario 2 — Data Manipulation (petugas mengubah lokasi barang langsung lewat API)
-
-**Solusi:** lokasi aset dinyatakan **tidak dapat diubah langsung dari API** — hanya bisa lewat proses transfer yang disetujui.
-
-FormRequest menandai `location_id` sebagai `prohibited` ([backend/app/Http/Requests/UpdateAssetRequest.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/UpdateAssetRequest.php#L29-L61)):
-
-```php
-'location_id' => ['prohibited'],
-...
-'location_id.prohibited' => 'Lokasi aset tidak dapat diubah langsung. Gunakan proses transfer.',
-```
-
-Selain itu, **percobaan manipulasi tetap dicatat di audit trail** sebelum request ditolak ([UpdateAssetRequest::failedValidation](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Requests/UpdateAssetRequest.php#L64-L83)):
-
-```php
-protected function failedValidation(Validator $validator): void
-{
-    if ($validator->errors()->has('location_id')) {
-        app(AuditService::class)->log(
-            ActivityAction::AssetLocationChangeAttempt,
-            user: $this->user(),
-            asset: $asset instanceof Asset ? $asset : null,
-            newValues: ['location_id' => $this->input('location_id')],
-            request: $this,
-        );
-    }
-    parent::failedValidation($validator);
-}
-```
-
-Ditambah dua gerbang tambahan: **service memverifikasi status** (aset dalam transfer tak bisa diubah — [AssetService::update](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/AssetService.php#L70-L74)) dan **kanal API hanya mengekspos route dengan middleware `auth:sanctum` + `active.user`** ([backend/bootstrap/app.php](https://github.com/maschollan/DaetSys/blob/main/backend/bootstrap/app.php#L34)) — tidak ada pintu belakang ke model lewat route lain.
-
-### Scenario 3 — Audit Trail (barang hilang, riwayat perpindahan panjang)
-
-Riwayat dibangun dari **aktivitas log** bertautan ke `asset_id`, `transfer_id`, dan `user_id` dengan waktu — tabel audit punya composite index agar filter cepat ([backend/database/migrations/2026_10_22_000009_create_activity_logs_table.php](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000009_create_activity_logs_table.php#L23-L27)):
-
-```php
-$table->index(['user_id', 'created_at']);
-$table->index(['asset_id', 'created_at']);
-$table->index(['transfer_id', 'created_at']);
-$table->index(['action', 'created_at']);
-```
-
-Riwayat per aset disediakan endpoint khusus ([backend/routes/api.php](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php#L46)):
-
-```php
-Route::get('/assets/{asset}/history', [AssetController::class, 'history']);
-```
-
-Dalam setiap entri transfer, `old_values`/`new_values` menangkap **siapa + apa + kapan** ([TransferService::receive — audit](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L351-L366)):
+**Solusi:** setiap aktivitas penting ditautkan ke akun, barang, dan transfer. Riwayat barang diurutkan menurut waktu dan dapat ditelusuri melalui endpoint riwayat.
 
 ```php
 $this->audit->log(
@@ -361,12 +76,8 @@ $this->audit->log(
     user: $receiver,
     asset: $asset,
     transfer: $locked,
-    oldValues: [
-        'status' => TransferStatus::Handover->value,
-        'location_id' => $locked->from_location_id,
-    ],
+    oldValues: ['location_id' => $locked->from_location_id],
     newValues: [
-        'status' => TransferStatus::Completed->value,
         'location_id' => $locked->to_location_id,
         'received_by' => $receiver->id,
     ],
@@ -374,87 +85,78 @@ $this->audit->log(
 );
 ```
 
-Dengan transisi `request → approve/reject → handover → receive`, setiap langkah pengesahan diikat ke nama petugas yang melakukannya beserta waktunya — sehingga untuk barang yang hilang, riwayat kueri `/assets/{asset}/history` selalu dapat menunjukkan **pemegang terakhir** dan seluruh rantai perpindahannya.
+Contoh pencatatan penerimaan ada di [TransferService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L351-L366). Riwayat per barang dilayani oleh [AssetController](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Controllers/Api/AssetController.php#L118-L132), dan tabel audit memiliki indeks untuk pencarian berdasarkan barang, transfer, pengguna, dan waktu ([migrasi activity logs](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000009_create_activity_logs_table.php#L23-L27)).
 
-### Scenario 4 — Data Integrity saat gangguan (transfer di tengah proses)
+**Hasil yang diharapkan:** auditor dapat melihat rantai perpindahan dan pihak yang tercatat pada setiap langkah. Riwayat membantu investigasi, tetapi tidak otomatis membuktikan siapa yang secara fisik memegang barang ketika barang hilang.
 
-**Solusi: semua mutasi transfer dibungkus satu transaksi** — gagal di tengah = seluruh perubahan dibatalkan, aset tidak mungkin tercatat di dua lokasi ([TransferService::request](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L47-L121)):
+## Skenario 4 — Gangguan terjadi saat transfer berlangsung
 
-```php
-return DB::transaction(function () use (...): Transfer {
-    $asset = Asset::query()->lockForUpdate()->find($assetId);   // kunci baris
-    ...
-    Transfer::create([... 'active_asset_id' => $asset->id]);
-    $asset->update(['status' => AssetStatus::InTransfer->value]);
-    $this->audit->log(...);                                     // log ikut transaksi
-    DB::afterCommit(fn () => $this->notifications->notifyTransferRequested($transfer));
-    return $transfer;
-});
-```
+**Masalah:** jika aplikasi berhenti di tengah proses, data transfer, lokasi barang, dan catatan audit dapat berbeda satu sama lain.
 
-Gangguan di mana pun dijaga dua lapis:
-
-- **UNIQUE `active_asset_id`** → hanya boleh ada satu transfer aktif per aset, sekaligus;
-- Status aset tidak akan pernah "setengah terganti": mutasi status aset dan mutasi transfer dilakukan dalam transaksi yang sama, selalu setelah barisnya dikunci dengan `lockForUpdate` — bila transaksi rollback, status lama tetap.
-
-Lapis tambahan untuk duplikasi klik/kirim ulang: middleware **Idempotency-Key** ([backend/app/Http/Middleware/EnsureIdempotency.php](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Middleware/EnsureIdempotency.php#L13-L40)) — kirim ulang request yang sama mengembalikan respons **tersimpan sebelumnya**, bukan menggandakan transfer:
+**Solusi:** perubahan terkait dilakukan dalam satu transaksi database. Jika transaksi gagal sebelum selesai, database membatalkan perubahan di dalam transaksi. Pemberitahuan dijalankan setelah transaksi berhasil di-commit.
 
 ```php
-try {
-    $this->idempotency->reserve($key, $scope, $request->user(), $payload);
-} catch (IdempotentReplay $replay) {
-    return response($replay->body(), $replay->status())
-        ->header('Idempotent-Replayed', 'true');
-}
+// Di dalam DB::transaction():
+$asset = Asset::query()->lockForUpdate()->find($assetId);
+$transfer = Transfer::create([/* data perpindahan */]);
+$asset->update(['status' => AssetStatus::InTransfer->value]);
+$this->audit->log(
+    ActivityAction::TransferRequested,
+    user: $requester,
+    asset: $asset,
+    transfer: $transfer,
+);
+
+DB::afterCommit(fn () => $this->notifications->notifyTransferRequested($transfer));
 ```
 
-### Scenario 5 — Performance (500.000 aset, jutaan riwayat aktivitas)
+Contoh lengkap tersedia di [TransferService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L47-L119). Request yang terkirim ulang juga dapat memakai `Idempotency-Key`; [middleware idempotensi](https://github.com/maschollan/DaetSys/blob/main/backend/app/Http/Middleware/EnsureIdempotency.php#L13-L40) mengembalikan respons yang tersimpan untuk request yang sama.
 
-Empat strategi di kode:
+**Hasil yang diharapkan:** data transfer dan barang tidak tertinggal dalam keadaan setengah diperbarui. Pengiriman ulang request yang sama tidak membuat transfer duplikat.
 
-1. **Indexing komprehensif mengikuti pola query baca** — index dibuat pas dengan filter dan urutan yang benar-benar dipakai aplikasi ([backend/database/migrations/2026_10_22_000005_create_assets_table.php](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000005_create_assets_table.php#L25-L29)):
+## Skenario 5 — 500.000 barang dan jutaan aktivitas
 
-    ```php
-    $table->index('status');
-    $table->index('category_id');
-    $table->index(['location_id', 'status']);      // filter lokasi+status
-    $table->index(['status', 'created_at']);       // sort waktu per status
-    $table->index('created_at');
-    ```
+**Masalah:** tabel yang besar dapat membuat pencarian, dashboard, dan laporan lambat.
 
-2. **Dashboard memakai agregat + cache**, bukan menghitung loop aplikasi ([DashboardService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/DashboardService.php#L26-L32)) — COUNT di level SQL via `selectRaw('status, COUNT(*)')`; ringkasan di-cache 60 detik:
+**Langkah yang sudah ada di kode:**
 
-    ```php
-    return Cache::remember(self::CACHE_KEY, (int) config(...), fn () => $this->buildSummary());
-    ```
+1. **Indeks database** pada kolom yang umum dipakai untuk filter, seperti status, kategori, lokasi, dan tanggal ([migrasi aset](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000005_create_assets_table.php#L25-L29)).
+2. **Agregasi database dan cache** untuk ringkasan dashboard ([DashboardService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/DashboardService.php#L26-L61)).
+3. **Paginasi hasil JSON** supaya daftar biasa tidak mengirim semua baris sekaligus ([ReportService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/ReportService.php#L23-L40)).
 
-3. **Reporting selalu `paginate` + `LengthAwarePaginator` + eager loading kolom selektif** ([ReportService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/ReportService.php#L25-L39)) — tidak pernah memuat seluruh 500k baris; `with(['category:id,name', 'location:id,code,name'])` menutup N+1:
+**Yang masih perlu dibuktikan:** optimasi tersebut belum membuktikan target kecepatan pada 500.000 barang. Pencarian yang memakai pola “mengandung kata” dapat tetap memeriksa banyak baris, dan ekspor CSV aset saat ini mengambil seluruh hasil dengan `get()` ([ReportService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/ReportService.php#L95-L105)). Sebelum mengklaim siap untuk skala itu, jalankan pengujian beban dan ukur query pada database serta infrastruktur target. Ekspor besar dapat dipertimbangkan untuk diproses bertahap atau melalui antrean pekerjaan.
 
-    ```php
-    ->with(['category:id,name', 'location:id,code,name'])
-    ...
-    ->paginate($filters['per_page'] ?? 25)->withQueryString();
-    ```
+## Pengujian dan deployment
 
-4. **Filter ter-whitelist dan pencarian teks terbatas** ([ReportService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/ReportService.php#L27-L39)) — filter dan pengurutan selalu berasal dari whitelist, tidak pernah diteruskan mentah dari input pengguna; pencarian `LIKE '%keyword%'` dibatasi hanya ke tiga kolom aset (`asset_code`, `name`, `serial_number`) dan dijalankan **di dalam query berpaginasi**, sehingga hasilnya dibatasi `per_page` dan tidak pernah memindai 500k baris ke memori aplikasi.
+Repository memiliki pengujian fitur untuk autentikasi, aset, transfer, audit, dashboard, dan laporan. Contohnya dapat dilihat pada [pengujian workflow transfer](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Workflow/TransferWorkflowTest.php), [pengujian dashboard](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/DashboardApiTest.php), dan [pengujian laporan](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/ReportApiTest.php). Pengujian yang ada membantu memeriksa aturan dan alur, tetapi belum menjadi bukti bahwa dua request benar-benar berjalan pada saat yang sama atau bahwa sistem memenuhi target performa skala besar.
 
-> **Bukti tes performa/paginasi:** Dashboard dan Report diaudit terpisah — [tests/Feature/Api/DashboardApiTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/DashboardApiTest.php), [tests/Feature/Api/ReportApiTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/ReportApiTest.php).
+Konfigurasi deployment menggunakan PostgreSQL melalui [Render Blueprint](https://github.com/maschollan/DaetSys/blob/main/render.yaml#L20-L37). Karena sebagian penanganan konflik kode masih spesifik MySQL, kompatibilitas error database dan pengujian integritas perlu dirapikan sebelum mengandalkan perilaku konflik yang sama di produksi.
 
----
+### Lingkungan produksi (live)
 
-## 3. Uji & Verifikasi
+| Layanan | URL |
+|---------|-----|
+| Aplikasi web (frontend) | https://daetsys.onrender.com |
+| API backend | https://daetsysapi.onrender.com |
+| Dokumentasi API (hanya admin) | https://daetsysapi.onrender.com/docs |
 
-| Bagian | Test |
-|---|---|
-| Auth & role | [tests/Feature/Api/AuthTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/AuthTest.php) |
-| Asset CRUD + validasi duplikat | [tests/Feature/Api/AssetTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/AssetTest.php) |
-| Alur Transfer lengkap + concurrency | [tests/Feature/Workflow/TransferWorkflowTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Workflow/TransferWorkflowTest.php) |
-| Audit trail & privacy redaction | [tests/Feature/Api/AuditTest.php](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/AuditTest.php) |
-| Dashboard & Report | [DashboardApiTest](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/DashboardApiTest.php) · [ReportApiTest](https://github.com/maschollan/DaetSys/blob/main/backend/tests/Feature/Api/ReportApiTest.php) |
+Akun admin default untuk mengakses dokumen API di `/docs` (disediakan oleh seeder produksi):
 
-Hasil terakhir: **58 test / 298 assertions lulus**, PHP styling bersih `Pint`.
+- **Email:** `admin@daetsys.prod`
+- **Kata sandi:** `AdminTerus99!`
 
-## 4. Deployment
+Kredensial diambil dari variabel lingkungan produksi (`BOOTSTRAP_ADMIN_*` di `.env.production`) dan dapat diganti setelah deployment pertama.
 
-- **Backend:** Docker ([backend/Dockerfile](https://github.com/maschollan/DaetSys/blob/main/backend/Dockerfile)) di Render — boot menjalankan migrasi + seeder produksi + `config:cache` + ekspor OpenAPI, lalu `php artisan serve`; `/docs` terproteksi sesi admin.
-- **Frontend:** SPA statik di Render ([render.yaml](https://github.com/maschollan/DaetSys/blob/main/render.yaml)) menunjuk `VITE_API_BASE_URL` ke layanan API.
+## Kesimpulan
+
+DaetSys menyediakan pencatatan aset, QR, persetujuan perpindahan, serah terima, riwayat audit, dashboard, dan laporan. Perlindungan utamanya berasal dari pemeriksaan akses di backend, transaksi database, penguncian data saat transfer, dan batasan unik database.
+
+Sebelum menyatakan seluruh skenario produksi telah tuntas, pekerjaan lanjutan yang paling penting adalah menguji concurrency dengan request paralel sungguhan, menyamakan penanganan konflik MySQL dan PostgreSQL, serta mengukur pencarian dan ekspor pada volume data besar.
+
+## Tautan untuk reviewer
+
+- [Repositori lengkap DaetSys](https://github.com/maschollan/DaetSys)
+- [Route API](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php)
+- [TransferService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php)
+- [AuditService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/AuditService.php)
+- [Frontend Vue](https://github.com/maschollan/DaetSys/tree/main/frontend/src)

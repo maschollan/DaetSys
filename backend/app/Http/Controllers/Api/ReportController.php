@@ -64,6 +64,13 @@ class ReportController extends Controller
     {
         $filters = $this->filtersFor($request, 'activity-logs');
 
+        if ($request->outputFormat() === 'csv') {
+            return response($this->reports->activityLogsCsv($filters), 200, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="activity-logs-report.csv"',
+            ]);
+        }
+
         $paginator = $this->reports->activityLogs($filters);
 
         return ActivityLogResource::collection($paginator)->additional([

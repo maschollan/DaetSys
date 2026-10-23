@@ -107,3 +107,52 @@ it('updates location only after receive', function () {
     expect($asset->location_id)->toBe($toLocation->id);
     expect($asset->status->value)->toBe(AssetStatus::Available->value);
 });
+
+it('resolves the transfer detail by uniqid in the url', function () {
+    $admin = createUserWithRole('admin');
+    $requester = createUserWithRole('officer');
+    $asset = Asset::factory()->create();
+    $transfer = Transfer::factory()->create([
+        'asset_id' => $asset->id,
+        'from_location_id' => $asset->location_id,
+        'to_location_id' => Location::factory()->create()->id,
+        'requested_by' => $requester->id,
+        'status' => TransferStatus::Pending->value,
+    ]);
+
+    Sanctum::actingAs($admin);
+
+    expect($transfer->uniqid)->toBeString()->not->toBe((string) $transfer->id);
+
+    $this->getJson("/api/transfers/{$transfer->uniqid}")
+        ->assertOk()
+        ->assertJsonPath('data.uniqid', $transfer->uniqid)
+        ->assertJsonPath('data.id', $transfer->id);
+});
+
+it('keeps resolving the transfer detail by legacy numeric id', function () {
+    $admin = createUserWithRole('admin');
+    $requester = createUserWithRole('officer');
+    $asset = Asset::factory()->create();
+    $transfer = Transfer::factory()->create([
+        'asset_id' => $asset->id,
+        'from_location_id' => $asset->location_id,
+        'to_location_id' => Location::factory()->create()->id,
+        'requested_by' => $requester->id,
+        'status' => TransferStatus::Pending->value,
+    ]);
+
+    Sanctum::actingAs($admin);
+
+    $this->getJson("/api/transfers/{$transfer->id}")
+        ->assertOk()
+        ->assertJsonPath('data.uniqid', $transfer->uniqid);
+});
+
+it('returns 404 for an unknown transfer token', function () {
+    $admin = createUserWithRole('admin');
+
+    Sanctum::actingAs($admin);
+
+    $this->getJson('/api/transfers/01JZZZZZZZZZZZZZZZZZZZZZXX')->assertNotFound();
+});

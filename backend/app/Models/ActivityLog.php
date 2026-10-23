@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ActivityAction;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
@@ -25,6 +26,9 @@ use LogicException;
 ])]
 class ActivityLog extends Model
 {
+    /** @use HasFactory<ActivityLogFactory> */
+    use HasFactory;
+
     public $timestamps = false;
 
     /**

@@ -91,7 +91,7 @@ class DashboardService
             ->orderBy('status')
             ->get()
             ->map(fn ($row): array => [
-                'status' => (string) $row->status,
+                'status' => $row->status->value,
                 'total' => (int) $row->total,
             ])
             ->all();
@@ -134,6 +134,7 @@ class DashboardService
             ->get()
             ->map(fn (Transfer $transfer): array => [
                 'id' => $transfer->id,
+                'uniqid' => $transfer->uniqid,
                 'status' => $transfer->status->value,
                 'asset_code' => $transfer->asset?->asset_code,
                 'asset_name' => $transfer->asset?->name,

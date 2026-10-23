@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="id">
   <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DaetSys — Digital Asset &amp; Evidence Tracking System</title>
+    <script>
+      // Terapkan tema sebelum CSS dimuat agar tidak terjadi kedipan tema salah.
+      try {
+        var stored = window.localStorage.getItem('daetsys.theme')
+        if (stored !== 'light' && stored !== 'dark') {
+          stored = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.setAttribute('data-bs-theme', stored)
+      } catch (error) {
+        document.documentElement.setAttribute('data-bs-theme', 'light')
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

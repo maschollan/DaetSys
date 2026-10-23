@@ -1,0 +1,27 @@
+/*
+ * Font lokal DaetSys — AllenSans (frontend/src/font/).
+ * Licenses terlampir pada direktori font; jangan unduh font pengganti.
+ */
+@font-face {
+  font-family: 'AllenSans';
+  src: url('../font/AllenSans-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AllenSans';
+  src: url('../font/AllenSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AllenSans';
+  src: url('../font/AllenSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

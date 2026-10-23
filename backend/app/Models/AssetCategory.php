@@ -15,10 +15,13 @@ class AssetCategory extends Model
     use HasFactory;
 
     /**
+     * Kunci asing dinyatakan eksplisit karena skema memakai `category_id`,
+     * bukan tebakan konvensi `asset_category_id`.
+     *
      * @return HasMany<Asset, $this>
      */
     public function assets(): HasMany
     {
-        return $this->hasMany(Asset::class);
+        return $this->hasMany(Asset::class, 'category_id');
     }
 }

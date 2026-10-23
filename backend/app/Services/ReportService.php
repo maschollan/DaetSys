@@ -46,7 +46,7 @@ class ReportService
     public function transfers(array $filters): LengthAwarePaginator
     {
         $query = Transfer::query()
-            ->with(['asset:id,asset_code,name', 'fromLocation:id,name', 'toLocation:id,name', 'requestedBy:id,name'])
+            ->with(['asset:id,asset_code,name,qr_token,status', 'fromLocation:id,name', 'toLocation:id,name', 'requestedBy:id,name'])
             ->when($filters['status'] ?? null, fn (Builder $q, $v) => $q->where('status', $v))
             ->when($filters['asset_id'] ?? null, fn (Builder $q, $v) => $q->where('asset_id', $v))
             ->when($filters['location_id'] ?? null, fn (Builder $q, $v) => $q->where(function (Builder $inner) use ($v): void {
@@ -55,6 +55,9 @@ class ReportService
             ->when($filters['requested_by'] ?? null, fn (Builder $q, $v) => $q->where('requested_by', $v))
             ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('requested_at', '>=', $v))
             ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('requested_at', '<=', $v))
+            ->when($filters['search'] ?? null, fn (Builder $q, $v) => $q->whereHas('asset', fn (Builder $assetQuery) => $assetQuery
+                ->where('asset_code', 'like', '%'.$v.'%')
+                ->orWhere('name', 'like', '%'.$v.'%')))
             ->orderByDesc('requested_at');
 
         return $query->paginate($filters['per_page'] ?? 25)->withQueryString();
@@ -67,7 +70,7 @@ class ReportService
     public function activityLogs(array $filters): LengthAwarePaginator
     {
         $query = ActivityLog::query()
-            ->with(['user:id,name', 'asset:id,asset_code'])
+            ->with(['user:id,name', 'asset:id,asset_code,qr_token'])
             ->when($filters['user_id'] ?? null, fn (Builder $q, $v) => $q->where('user_id', $v))
             ->when($filters['asset_id'] ?? null, fn (Builder $q, $v) => $q->where('asset_id', $v))
             ->when($filters['transfer_id'] ?? null, fn (Builder $q, $v) => $q->where('transfer_id', $v))
@@ -136,7 +139,7 @@ class ReportService
     public function transfersCsv(array $filters): string
     {
         $rows = Transfer::query()
-            ->with(['asset:id,asset_code,name', 'fromLocation:id,name', 'toLocation:id,name', 'requestedBy:id,name'])
+            ->with(['asset:id,asset_code,name,qr_token,status', 'fromLocation:id,name', 'toLocation:id,name', 'requestedBy:id,name'])
             ->when($filters['status'] ?? null, fn (Builder $q, $v) => $q->where('status', $v))
             ->when($filters['asset_id'] ?? null, fn (Builder $q, $v) => $q->where('asset_id', $v))
             ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('requested_at', '>=', $v))
@@ -162,6 +165,52 @@ class ReportService
                 $transfer->reason,
                 $transfer->requested_at?->toDateTimeString(),
                 $transfer->completed_at?->toDateTimeString(),
+            ]);
+        }
+
+        rewind($handle);
+        $csv = (string) stream_get_contents($handle);
+        fclose($handle);
+
+        return $csv;
+    }
+
+    /**
+     * Ekspor daftar jejak audit ke CSV.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function activityLogsCsv(array $filters): string
+    {
+        $rows = ActivityLog::query()
+            ->with(['user:id,name', 'asset:id,asset_code,qr_token'])
+            ->when($filters['user_id'] ?? null, fn (Builder $q, $v) => $q->where('user_id', $v))
+            ->when($filters['asset_id'] ?? null, fn (Builder $q, $v) => $q->where('asset_id', $v))
+            ->when($filters['transfer_id'] ?? null, fn (Builder $q, $v) => $q->where('transfer_id', $v))
+            ->when($filters['action'] ?? null, fn (Builder $q, $v) => $q->where('action', $v))
+            ->when($filters['date_from'] ?? null, fn (Builder $q, $v) => $q->whereDate('created_at', '>=', $v))
+            ->when($filters['date_to'] ?? null, fn (Builder $q, $v) => $q->whereDate('created_at', '<=', $v))
+            ->when($filters['search'] ?? null, fn (Builder $q, $v) => $q->where(function (Builder $inner) use ($v): void {
+                $inner->whereHas('asset', fn (Builder $assetQuery) => $assetQuery->where('asset_code', 'like', '%'.$v.'%'))
+                    ->orWhere('action', 'like', '%'.$v.'%');
+            }))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $handle = fopen('php://temp', 'r+');
+
+        fputcsv($handle, [
+            'Logged At', 'Action', 'User', 'Asset Code', 'Transfer ID',
+        ]);
+
+        foreach ($rows as $log) {
+            fputcsv($handle, [
+                $log->created_at?->toDateTimeString(),
+                $log->action,
+                $log->user?->name,
+                $log->asset?->asset_code,
+                $log->transfer_id,
             ]);
         }
 

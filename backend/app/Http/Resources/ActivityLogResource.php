@@ -26,6 +26,7 @@ class ActivityLogResource extends JsonResource
             'asset' => $this->whenLoaded('asset', fn (): ?array => $this->asset === null ? null : [
                 'id' => $this->asset->id,
                 'asset_code' => $this->asset->asset_code,
+                'qr_token' => $this->asset->qr_token,
             ]),
             'transfer_id' => $this->transfer_id,
             'old_values' => $this->old_values,

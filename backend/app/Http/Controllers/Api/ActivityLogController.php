@@ -18,7 +18,7 @@ class ActivityLogController extends Controller
         $this->authorize('viewAny', ActivityLog::class);
 
         $query = ActivityLog::query()
-            ->with(['user:id,name', 'asset:id,asset_code'])
+            ->with(['user:id,name', 'asset:id,asset_code,qr_token'])
             ->when($request->validated('user_id'), fn ($builder, $value) => $builder->where('user_id', $value))
             ->when($request->validated('asset_id'), fn ($builder, $value) => $builder->where('asset_id', $value))
             ->when($request->validated('transfer_id'), fn ($builder, $value) => $builder->where('transfer_id', $value))
@@ -57,7 +57,7 @@ class ActivityLogController extends Controller
         $this->authorize('view', $activityLog);
 
         return response()->json([
-            'data' => new ActivityLogResource($activityLog->load(['user:id,name', 'asset:id,asset_code'])),
+            'data' => new ActivityLogResource($activityLog->load(['user:id,name', 'asset:id,asset_code,qr_token'])),
         ]);
     }
 }

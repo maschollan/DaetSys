@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'asset_id',
@@ -27,6 +28,26 @@ class Transfer extends Model
 {
     /** @use HasFactory<TransferFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        // URL detail transfer memakai uniqid (pola yang sama dengan qr_token
+        // aset) sehingga id numerik tidak terekspos di luar sistem.
+        static::creating(function (self $transfer): void {
+            $transfer->uniqid ??= (string) Str::ulid();
+        });
+    }
+
+    /**
+     * Binding rute menerima uniqid maupun id numerik; fallback numerik
+     * menjaga tautan lama (migrasi UI, payload notifikasi lama) tetap sah.
+     */
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        $column = ctype_digit((string) $value) ? 'id' : 'uniqid';
+
+        return $this->where($column, $value)->first();
+    }
 
     /**
      * @return array<string, string>

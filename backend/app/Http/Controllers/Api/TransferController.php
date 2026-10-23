@@ -28,7 +28,7 @@ class TransferController extends Controller
     {
         $query = Transfer::query()
             ->with([
-                'asset:id,asset_code,name,status',
+                'asset:id,asset_code,name,qr_token,status',
                 'fromLocation:id,code,name',
                 'toLocation:id,code,name',
                 'requestedBy:id,name',
@@ -76,7 +76,7 @@ class TransferController extends Controller
         );
 
         return (new TransferDetailResource($transfer->load([
-            'asset:id,asset_code,name,status',
+            'asset:id,asset_code,name,qr_token,status',
             'fromLocation:id,code,name',
             'toLocation:id,code,name',
             'requestedBy:id,name',
@@ -94,7 +94,7 @@ class TransferController extends Controller
 
         return response()->json([
             'data' => new TransferDetailResource($transfer->load([
-                'asset:id,asset_code,name,status',
+                'asset:id,asset_code,name,qr_token,status',
                 'fromLocation:id,code,name',
                 'toLocation:id,code,name',
                 'requestedBy:id,name',

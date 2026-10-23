@@ -18,9 +18,11 @@ class TransferResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'uniqid' => $this->uniqid,
             'asset' => $this->whenLoaded('asset', fn (): ?array => $this->asset === null ? null : [
                 'id' => $this->asset->id,
                 'asset_code' => $this->asset->asset_code,
+                'qr_token' => $this->asset->qr_token,
                 'name' => $this->asset->name,
                 'status' => $this->asset->status->value,
             ]),

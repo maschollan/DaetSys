@@ -109,6 +109,17 @@ final class ApiDocumentation
                 ),
                 'tags' => ['Autentikasi'],
             ],
+            'profile.update' => [
+                'summary' => 'Perbarui profil sendiri',
+                'description' => self::description(
+                    'Self-service: pengguna aktif memperbarui profilnya sendiri (saat ini field `name`).',
+                    [
+                        'Perubahan tercatat di jejak audit (`user.updated`) dengan nilai lama/baru.',
+                        'Endpoint manajemen `PUT /api/users/{user}` tetap khusus admin; endpoint ini tidak menyentuh role, email, atau status akun.',
+                    ],
+                ),
+                'tags' => ['Autentikasi'],
+            ],
             'change-password' => [
                 'summary' => 'Ganti password sendiri',
                 'description' => self::description(
@@ -535,6 +546,7 @@ final class ApiDocumentation
                     [
                         'Gunakan `unread_only=true` untuk hanya menampilkan notifikasi yang belum dibaca.',
                         'Field `meta.unread_count` berisi jumlah notifikasi yang belum dibaca.',
+                        'Paginasi penuh: `page` & `per_page` (default 25). Order terbaru dahulu; cocok untuk infinite scroll klien.',
                     ],
                 ),
                 'tags' => ['Notifikasi'],

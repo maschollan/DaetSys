@@ -108,4 +108,27 @@ class AuthService
             );
         });
     }
+
+    /**
+     * Memperbarui profil sendiri (saat ini: nama) dan mencatat perubahan
+     * ke jejak audit.
+     */
+    public function updateProfile(User $user, array $attributes, ?Request $request = null): User
+    {
+        return DB::transaction(function () use ($user, $attributes, $request): User {
+            $oldValues = $user->only('name');
+
+            $user->update($attributes);
+
+            $this->audit->log(
+                ActivityAction::UserUpdated,
+                user: $user,
+                oldValues: $oldValues,
+                newValues: $user->only('name'),
+                request: $request,
+            );
+
+            return $user->load('role');
+        });
+    }
 }

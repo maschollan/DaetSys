@@ -1,0 +1,208 @@
+/*
+ * Design tokens DaetSys (PLAN.md §11).
+ * Tema mengikuti atribut `data-bs-theme` Bootstrap 5.3 sehingga
+ * Bootstrap color mode dan variabel --ds-* selalu sinkron.
+ */
+
+:root,
+[data-bs-theme='light'] {
+  --ds-primary: #0d9488;
+  --ds-primary-hover: #0f766e;
+  --ds-bg: #f1f7f5;
+  --ds-surface: #ffffff;
+  --ds-text: #13231f;
+  --ds-muted: #566f6a;
+  --ds-border: #d9e5e3;
+  --ds-success: #15803d;
+  --ds-warning: #b45309;
+  --ds-danger: #b91c1c;
+
+  --ds-primary-rgb: 13, 148, 136;
+}
+
+[data-bs-theme='dark'] {
+  color-scheme: dark;
+
+  --ds-primary: #14b8a6;
+  --ds-primary-hover: #2dd4bf;
+  --ds-bg: #0a1714;
+  --ds-surface: #0f231f;
+  --ds-text: #dcebe7;
+  --ds-muted: #8ca69f;
+  --ds-border: #1d3a33;
+  --ds-success: #22c55e;
+  --ds-warning: #f59e0b;
+  --ds-danger: #ef4444;
+
+  --ds-primary-rgb: 20, 184, 166;
+}
+
+/* ---------- Mapping design tokens ke variabel Bootstrap ---------- */
+
+:root,
+[data-bs-theme='light'],
+[data-bs-theme='dark'] {
+  --bs-font-sans-serif: 'AllenSans', system-ui, sans-serif;
+
+  --bs-body-bg: var(--ds-bg);
+  --bs-body-color: var(--ds-text);
+  --bs-border-color: var(--ds-border);
+
+  --bs-primary: var(--ds-primary);
+  --bs-primary-rgb: var(--ds-primary-rgb);
+  --bs-link-color: var(--ds-primary);
+  --bs-link-color-rgb: var(--ds-primary-rgb);
+  --bs-link-hover-color: var(--ds-primary-hover);
+
+  --bs-danger: var(--ds-danger);
+  --bs-danger-rgb: 185, 28, 28;
+  --bs-warning: var(--ds-warning);
+  --bs-warning-rgb: 180, 83, 9;
+  --bs-success: var(--ds-success);
+  --bs-success-rgb: 21, 128, 61;
+
+  --ds-form-focus-ring: 0 0 0 0.2rem rgba(var(--ds-primary-rgb), 0.25);
+}
+
+[data-bs-theme='dark'] {
+  --bs-danger-rgb: 239, 68, 68;
+  --bs-warning-rgb: 245, 158, 11;
+  --bs-success-rgb: 34, 197, 94;
+
+  --ds-form-focus-ring: 0 0 0 0.2rem rgba(var(--ds-primary-rgb), 0.35);
+}
+
+/* ---------- Sudut persegi untuk seluruh komponen (PLAN.md §11) ---------- */
+
+:root,
+[data-bs-theme='light'],
+[data-bs-theme='dark'] {
+  --bs-border-radius: 0;
+  --bs-border-radius-sm: 0;
+  --bs-border-radius-lg: 0;
+  --ds-radius-xl: 0;
+  --bs-border-radius-xxl: 0;
+  --bs-border-radius-2xl: 0;
+  --bs-border-radius-pill: 0;
+
+  --bs-btn-border-radius: 0;
+  --bs-card-border-radius: 0;
+  --bs-modal-border-radius: 0;
+  --bs-toast-border-radius: 0;
+  --bs-badge-border-radius: 0;
+  --bs-list-group-border-radius: 0;
+  --bs-accordion-border-radius: 0;
+  --bs-alert-border-radius: 0;
+  --bs-input-border-radius: 0;
+  --bs-dropdown-border-radius: 0;
+  --bs-pagination-border-radius: 0;
+  --bs-progress-border-radius: 0;
+  --bs-form-select-border-radius: 0;
+}
+
+/* ---------- Tipografi & helper ---------- */
+
+body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+::selection {
+  background: rgba(var(--ds-primary-rgb), 0.3);
+}
+
+/* ---------- Tombol: gaya outline sebagai default ---------- */
+
+.btn {
+  --bs-btn-focus-box-shadow: var(--ds-form-focus-ring);
+}
+
+.btn-primary {
+  color: var(--ds-primary);
+  border: 1px solid var(--ds-primary);
+  background-color: transparent;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  color: var(--ds-primary-hover);
+  border-color: var(--ds-primary-hover);
+  background-color: transparent;
+}
+
+.btn-primary:active {
+  color: var(--ds-primary-hover) !important;
+  border-color: var(--ds-primary-hover) !important;
+  background-color: rgba(var(--ds-primary-rgb), 0.1) !important;
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled {
+  color: var(--ds-muted);
+  border-color: var(--ds-border);
+  background-color: transparent;
+}
+
+/* Varian solid untuk tindakan utama jika dibutuhkan. */
+.btn-fill-primary {
+  color: #ffffff;
+  border: 1px solid var(--ds-primary);
+  background-color: var(--ds-primary);
+}
+
+.btn-fill-primary:hover,
+.btn-fill-primary:focus-visible {
+  color: #ffffff;
+  border-color: var(--ds-primary-hover);
+  background-color: var(--ds-primary-hover);
+}
+
+.btn-fill-primary:disabled,
+.btn-fill-primary.disabled {
+  color: rgba(255, 255, 255, 0.7);
+  border-color: var(--ds-border);
+  background-color: var(--ds-muted);
+}
+
+.btn-outline-secondary {
+  color: var(--ds-text);
+  border: 1px solid var(--ds-primary);
+  background-color: transparent;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus-visible {
+  color: var(--ds-text);
+  border-color: var(--ds-muted);
+  background-color: rgba(var(--ds-primary-rgb), 0.08);
+}
+
+/* ---------- Fokus form mengikuti warna primary ---------- */
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus,
+.input-group:focus-within .form-control {
+  border-color: var(--ds-primary);
+  box-shadow: var(--ds-form-focus-ring);
+}
+
+.form-control::placeholder {
+  color: var(--ds-muted);
+  opacity: 1;
+}
+
+.form-check-input:checked {
+  background-color: var(--ds-primary);
+  border-color: var(--ds-primary);
+}

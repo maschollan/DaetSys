@@ -22,6 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Aplikasi ini API-only dan tidak memiliki route bernama "login".
+        // Callback bawaan Laravel `fn () => route('login')` akan melempar
+        // RouteNotFoundException saat browser mengakses endpoint terlindungi
+        // tanpa header Accept: application/json. Kembalikan null agar
+        // Authenticate melempar AuthenticationException yang ditangani
+        // handler di bawah.
+        $middleware->redirectGuestsTo(fn () => null);
+
         $middleware->alias([
             'active.user' => EnsureUserIsActive::class,
             'role' => EnsureRole::class,
@@ -39,6 +47,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Format error API yang konsisten untuk seluruh endpoint.
         $exceptions->render(function (Throwable $e, Request $request) {
+            // Autentikasi gagal selalu dijawab 401 JSON, termasuk akses
+            // browser (Accept bukan application/json), karena tidak ada
+            // halaman login server-rendered pada aplikasi API-only.
+            if ($e instanceof AuthenticationException) {
+                return response()->json([
+                    'message' => $e->getMessage() ?: 'Unauthenticated.',
+                ], 401);
+            }
+
             if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return null;
             }
@@ -48,12 +65,6 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage(),
                     'errors' => $e->errors(),
                 ], $e->status());
-            }
-
-            if ($e instanceof AuthenticationException) {
-                return response()->json([
-                    'message' => 'Unauthenticated.',
-                ], 401);
             }
 
             if ($e instanceof AuthorizationException) {

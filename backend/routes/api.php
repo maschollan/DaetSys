@@ -29,6 +29,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'active.user'])->group(functi
     // Sesi pengguna
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
+    Route::put('/profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::post('/change-password', [AuthController::class, 'changePassword'])->name('api.change-password');
 
     // Dashboard (4 sub-endpoint wajib)

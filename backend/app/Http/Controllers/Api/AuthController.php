@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginRequest;
+use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\AuthService;
@@ -85,6 +86,22 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Password updated. Please sign in again.',
+        ]);
+    }
+
+    /**
+     * PUT /api/profile — pembaruan profil mandiri (nama).
+     */
+    public function updateProfile(ProfileUpdateRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $freshUser = $this->auth->updateProfile($user, $request->validated(), $request);
+
+        return response()->json([
+            'message' => 'Profile updated.',
+            'data' => new UserResource($freshUser),
         ]);
     }
 }

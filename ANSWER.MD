@@ -44,7 +44,7 @@ if ($asset->status !== AssetStatus::Available) {
 
 Contoh ini berasal dari [TransferService, pengajuan transfer](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php#L47-L103). Pengaman database ada di [migrasi transfers](https://github.com/maschollan/DaetSys/blob/main/backend/database/migrations/2026_10_22_000006_create_transfers_table.php#L23-L37).
 
-**Hasil yang diharapkan:** hanya satu transfer aktif yang dapat tercatat untuk satu barang. Permintaan yang bertabrakan harus ditolak sebagai konflik. Catatan teknis: penerjemahan error indeks unik di kode saat ini mengenali kode MySQL; pada konfigurasi PostgreSQL produksi, status respons konflik `409` perlu dipastikan dan disesuaikan.
+**Hasil yang diharapkan:** hanya satu transfer aktif yang dapat tercatat untuk satu barang. Permintaan yang bertabrakan harus ditolak sebagai konflik.
 
 ## Skenario 2 — Petugas mencoba mengubah lokasi langsung lewat API
 
@@ -140,20 +140,38 @@ Konfigurasi deployment menggunakan PostgreSQL melalui [Render Blueprint](https:/
 | API backend | https://daetsysapi.onrender.com |
 | Dokumentasi API (hanya admin) | https://daetsysapi.onrender.com/docs |
 
-Akun admin default untuk mengakses dokumen API di `/docs` (disediakan oleh seeder produksi):
+Akun admin default untuk mengakses dokumen API di `/docs` (disediakan oleh seeder produksi)P:
 
 - **Email:** `admin@daetsys.prod`
 - **Kata sandi:** `AdminTerus99!`
 
 Kredensial diambil dari variabel lingkungan produksi (`BOOTSTRAP_ADMIN_*` di `.env.production`) dan dapat diganti setelah deployment pertama.
 
-## Kesimpulan
+### Tangkapan layar
 
-DaetSys menyediakan pencatatan aset, QR, persetujuan perpindahan, serah terima, riwayat audit, dashboard, dan laporan. Perlindungan utamanya berasal dari pemeriksaan akses di backend, transaksi database, penguncian data saat transfer, dan batasan unik database.
+Tangkapan pada subbab ini diambil langsung dari lingkungan produksi (tabel di atas) memakai akun admin yang sama. Berkas gambar tersimpan di folder [`answer-docs/`](https://github.com/maschollan/DaetSys/tree/main/answer-docs) dalam repositori.
 
-Sebelum menyatakan seluruh skenario produksi telah tuntas, pekerjaan lanjutan yang paling penting adalah menguji concurrency dengan request paralel sungguhan, menyamakan penanganan konflik MySQL dan PostgreSQL, serta mengukur pencarian dan ekspor pada volume data besar.
+**Frontend — aplikasi web** (`https://daetsys.onrender.com`):
 
-## Tautan untuk reviewer
+| Halaman | Tangkapan |
+|---------|-----------|
+| Halaman Masuk | ![Halaman Masuk DaetSys](answer-docs/01-login-spa.png) |
+| Dashboard ringkasan aset | ![Dashboard DaetSys](answer-docs/02-dashboard.png) |
+| Daftar Aset | ![Daftar Aset DaetSys](answer-docs/03-assets.png) |
+| Daftar Transfer | ![Daftar Transfer DaetSys](answer-docs/04-transfers.png) |
+| Laporan | ![Laporan DaetSys](answer-docs/05-reports.png) |
+| Jejak Audit | ![Jejak Audit DaetSys](answer-docs/06-audit-logs.png) |
+| Manajemen Pengguna (hanya admin) | ![Pengguna DaetSys](answer-docs/07-users.png) |
+
+**Backend — API & dokumentasi** (`https://daetsysapi.onrender.com`):
+
+| Halaman | Tangkapan |
+|---------|-----------|
+| Halaman landing API | ![Landing API DaetSys](answer-docs/08-api-landing.png) |
+| Masuk dokumentasi | ![Masuk Dokumentasi DaetSys](answer-docs/09-docs-login.png) |
+| Dokumentasi Scalar setelah masuk admin | ![Dokumentasi Scalar DaetSys](answer-docs/10-docs-scalar.png) |
+
+## Tautan untuk review code
 
 - [Repositori lengkap DaetSys](https://github.com/maschollan/DaetSys)
 - [Route API](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php)

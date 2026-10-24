@@ -39,7 +39,7 @@ export default {
         :value="meta.per_page"
         :disabled="disabled"
         aria-label="Data per halaman"
-        @change="emit('per-page-change', Number($event.target.value))"
+        @change="$emit('per-page-change', Number($event.target.value))"
       >
         <option v-for="option in perPageOptions" :key="option" :value="option">
           {{ option }} / hal.
@@ -50,7 +50,7 @@ export default {
         type="button"
         class="btn btn-outline-secondary btn-sm"
         :disabled="disabled || meta.current_page <= 1"
-        @click="emit('page-change', meta.current_page - 1)"
+        @click="$emit('page-change', meta.current_page - 1)"
       >
         <i class="bi bi-chevron-left"></i>
       </button>
@@ -63,7 +63,7 @@ export default {
         type="button"
         class="btn btn-outline-secondary btn-sm"
         :disabled="disabled || meta.current_page >= meta.last_page"
-        @click="emit('page-change', meta.current_page + 1)"
+        @click="$emit('page-change', meta.current_page + 1)"
       >
         <i class="bi bi-chevron-right"></i>
       </button>

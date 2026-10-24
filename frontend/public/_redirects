@@ -1,0 +1,8 @@
+# SPA fallback untuk Render Static Site.
+#
+# Vue Router memakai createWebHistory, sehingga refresh atau tautan
+# langsung ke path aplikasi (/assets, /transfers, …) harus dibawa ke
+# index.html agar bootstrap SPA dapat me-render route-nya. Berkas asli
+# (index.html, /assets/*.js, favicon) tetap dilayani lebih dulu;
+# rewrite hanya berlaku untuk path yang tidak cocok dengan berkas.
+/*    /index.html    200

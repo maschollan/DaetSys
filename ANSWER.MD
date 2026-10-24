@@ -140,6 +140,8 @@ Konfigurasi deployment menggunakan PostgreSQL melalui [Render Blueprint](https:/
 | API backend | https://daetsysapi.onrender.com |
 | Dokumentasi API (hanya admin) | https://daetsysapi.onrender.com/docs |
 
+Statistik kecepatan load API dan aplikasi web di lingkungan ini diukur 24 Oktober 2026 dan dirinci beserta grafiknya di [PERFORMANCE.MD](PERFORMANCE.MD).
+
 Akun admin default untuk mengakses dokumen API di `/docs` (disediakan oleh seeder produksi)P:
 
 - **Email:** `admin@daetsys.prod`
@@ -173,6 +175,7 @@ Tangkapan pada subbab ini diambil langsung dari lingkungan produksi (tabel di at
 
 ## Tautan untuk review code
 
+- [PERFORMANCE.MD — statistik kecepatan load API & web produksi](PERFORMANCE.MD)
 - [Repositori lengkap DaetSys](https://github.com/maschollan/DaetSys)
 - [Route API](https://github.com/maschollan/DaetSys/blob/main/backend/routes/api.php)
 - [TransferService](https://github.com/maschollan/DaetSys/blob/main/backend/app/Services/TransferService.php)

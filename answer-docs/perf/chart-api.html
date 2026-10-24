@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; padding: 24px; background: #ffffff; font-family: "Segoe UI", Arial, sans-serif; }
+  svg { display: block; }
+  .bar { fill: #0d9488; }
+  .bar-label { font-size: 12px; fill: #334155; }
+  .val { font-size: 11px; fill: #0f172a; }
+  .title { font-size: 16px; font-weight: 700; fill: #0f172a; }
+  .sub { font-size: 11px; fill: #64748b; }
+  .axis { stroke: #cbd5e1; stroke-width: 1; }
+  .gridline { stroke: #e2e8f0; stroke-width: 1; }
+</style>
+</head>
+<body>
+<div id="chart" style="width:1240px">
+  <svg id="svg" width="1240" height="560"></svg>
+</div>
+<script>
+const data = [
+  ["GET /api/health (cold, layanan warm)", 281.8],
+  ["POST /api/login", 5505.8],
+  ["GET /api/me", 3091],
+  ["GET /api/dashboard/summary", 3100.9],
+  ["GET /api/assets?per_page=15", 3753.7],
+  ["GET /api/assets?search=kj-00", 3083.3],
+  ["GET /api/assets/qr/{token}", 3515.1],
+  ["GET /api/transfers?per_page=15", 4192.2],
+  ["GET /api/activity-logs?per_page=15", 3735.4],
+  ["GET /api/users?per_page=15", 3475.1],
+  ["GET /api/reports/assets?per_page=25", 6011.3],
+];
+const svg = document.getElementById("svg");
+const ns = "http://www.w3.org/2000/svg";
+const left = 300, barH = 26, gap = 14, barTop = 74;
+const max = Math.max(...data.map(d => d[1])) * 1.12;
+function el(name, attrs, text) {
+  const e = document.createElementNS(ns, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text) e.textContent = text;
+  svg.appendChild(e);
+  return e;
+}
+el("text", { x: 20, y: 42, class: "title" }, "Waktu Respons API DaetSys (produksi)");
+el("text", { x: 20, y: 62, class: "sub" }, "Median 10 sampel layak — 5 sampel untuk /reports — Render web service 0.1 core, PHP + PostgreSQL (Supabase), 24 Okt 2026");
+data.forEach((d, i) => {
+  const y = barTop + i * (barH + gap);
+  el("text", { x: left - 10, y: y + barH / 2 + 4, class: "bar-label", "text-anchor": "end" }, d[0]);
+  const w = (d[1] / max) * (1160 - left);
+  el("rect", { x: left, y: y, width: Math.max(2, w), height: barH, class: "bar", rx: 3 });
+  el("text", { x: left + Math.max(2, w) + 8, y: y + barH / 2 + 4, class: "val" }, d[1].toLocaleString("id-ID") + " ms");
+});
+el("line", { x1: left, y1: barTop - 6, x2: left, y2: barTop + data.length * (barH + gap), class: "axis" });
+</script>
+</body>
+</html>
+

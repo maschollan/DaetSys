@@ -1,0 +1,42 @@
+{
+  "measured_at_utc": "2026-10-24T07:05:00Z",
+  "client": "Playwright Chromium, viewport 1280x800, cookies reset + HTTP cache dinonaktifkan (CDP Network.setCacheDisabled)",
+  "network_note": "diukur dari jaringan pengguna (Indonesia) menuju service Render; latensi end-to-end, bukan p50 global CDN",
+  "static_boot": {
+    "page": "https://daetsys.onrender.com/login (SPA boot pertama)",
+    "ttfb_ms": 138,
+    "dom_content_loaded_ms": 286,
+    "load_ms": 331,
+    "runtime_resources_kb": 140
+  },
+  "login_to_dashboard_ready_wall_ms": 33527,
+  "dashboard_parallel_xhr_ms": {
+    "login": 8127,
+    "dashboard_summary": 15168,
+    "dashboard_assets_by_location": 10653,
+    "dashboard_assets_by_status": 22003,
+    "dashboard_recent_activities": 25166,
+    "dashboard_pending_transfers": 19085,
+    "note": "keenam request diluncurkan paralel dan berbagi worker PHP 0.1 core (PHP_CLI_SERVER_WORKERS=4), sehingga durasi masing-masing digilir oleh antrean CPU"
+  },
+  "client_navigation_to_data_ms": {
+    "assets": 7156,
+    "transfers": 7379,
+    "reports": 5317,
+    "audit_logs": 10083
+  },
+  "client_navigation_api_calls_ms": {
+    "assets": 7121,
+    "asset_categories": 3396,
+    "transfers": 7344,
+    "reports_assets": 5279,
+    "activity_logs": 10048
+  },
+  "docs": {
+    "login_page": { "ttfb_ms": 1454, "dom_content_loaded_ms": 1471, "load_ms": 1496, "wall_ms": 1513 },
+    "login_to_scalar_ready_wall_ms": 8944,
+    "api_json_fetch_ms": [1578, 3979],
+    "api_json_size_kb": 16
+  },
+  "spa_deep_link": "belum diukur: rewrite /* -> /index.html belum diterapkan lintas layanan (menunggu rule di Render dashboard) sehingga refresh deep-link masih 404 saat sesi pengukuran"
+}

@@ -4,6 +4,7 @@ import {
   cycleConnectionVariant,
   useConnectionVariant,
 } from '@/composables/useConnectionVariant'
+import { RETRY_INTERVAL_MS } from '@/services/healthService'
 
 /*
  * Visual animasi koneksi — dipakai bersama oleh BootScreen (preload)
@@ -28,6 +29,7 @@ export default {
       /** Ref bersama lintas BootScreen & ReconnectOverlay. */
       variant: useConnectionVariant(),
       dev: import.meta.env.DEV,
+      second: 0,
     }
   },
 
@@ -36,6 +38,32 @@ export default {
     switchTitle() {
       return `Ganti animasi (${CONNECTION_VARIANTS.indexOf(this.variant) + 1}/${CONNECTION_VARIANTS.length})`
     },
+    /** Hitung mundur ke retry berikutnya; tidak pernah negatif. */
+    timer() {
+      return Math.max(0, RETRY_INTERVAL_MS / 1000 - this.second)
+    },
+    /** Detik berjalan sejak percobaan terakhir; dibatasi ke interval. */
+    elapsed() {
+      return Math.min(this.second, RETRY_INTERVAL_MS / 1000)
+    },
+  },
+
+  watch: {
+    attempts() {
+      this.second = 0
+    },
+  },
+
+  mounted() {
+    this.tick = setInterval(() => {
+      this.second += 1
+    }, 1000)
+  },
+
+  beforeUnmount() {
+    // BootScreen unmount saat server siap; hentikan timer agar tidak
+    // menyisakan interval yatim yang terus men-tick.
+    clearInterval(this.tick)
   },
 
   methods: {
@@ -52,11 +80,11 @@ export default {
 
     <!-- terminal: log gaya CLI, menampilkan percobaan nyata (branding >_ ) -->
     <div v-if="variant === 'terminal'" class="cv-terminal">
-      <p class="cv-term-line">
-        > GET /api/health <span class="cv-term-err">FAIL</span>
-      </p>
+      <p class="cv-term-line">> GET /api/health <span class="cv-term-err">FAIL</span></p>
       <p :key="attempts" class="cv-term-line cv-term-retry">
-        > percobaan #{{ attempts || 1 }} · retry dalam 3s<span class="cv-caret">▊</span>
+        > percobaan #{{ attempts || 1 }}
+        <template v-if="second > 1">· retry in {{ timer }}s</template
+        ><span class="cv-caret">▊</span>
       </p>
     </div>
 
@@ -88,7 +116,7 @@ export default {
     </div>
 
     <p v-if="attempts > 0 && variant !== 'terminal'" class="cv-meta">
-      percobaan #{{ attempts }} · retry 3s
+      percobaan #{{ attempts }} <template v-if="second > 1">· retry in {{ timer }}s</template>
     </p>
 
     <button

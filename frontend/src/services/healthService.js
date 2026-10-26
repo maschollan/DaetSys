@@ -2,17 +2,17 @@ import axios from 'axios'
 
 import { API_BASE_URL } from '@/constants/api'
 
-/** Jeda antar percobaan health probe (ms). */
-const RETRY_INTERVAL_MS = 3000
+/** Jeda antar percobaan health probe (ms). Diekspor untuk UI countdown. */
+export const RETRY_INTERVAL_MS = 5000
 
 /*
- * Timeout satu probe. Sejalan dengan interval (3s) supaya satu siklus
- * gagal tetap ~3 detik; sebelumnya 10s membuat siklus terasa 13 detik.
+ * Timeout satu probe. Sejalan dengan interval (5s) supaya satu siklus
+ * gagal tetap ~5 detik.
  * Server yang benar-benar jalan biasanya merespons jauh lebih cepat, dan
  * bila probe lambat gagal karena jaringan, siklus berikutnya otomatis
  * mencoba lagi (tanpa batas percobaan).
  */
-const PROBE_TIMEOUT_MS = 3000
+const PROBE_TIMEOUT_MS = 5000
 
 const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
@@ -37,7 +37,7 @@ export async function probeHealth() {
 
 /**
  * Polling health hingga server merespons 200. Retry bersifat otomatis
- * tanpa batas percobaan (interval + timeout probe ≈ 3s per siklus):
+ * tanpa batas percobaan (interval + timeout probe ≈ 5s per siklus):
  * free tier Render bisa mengalami cold start jauh lebih lama dari satu
  * dua kali coba, jadi pemanggil (gate preload di App.vue atau store
  * connection) cukup menunggu Promise ini selesai.
@@ -58,4 +58,4 @@ export async function pollUntilHealthy({ intervalMs = RETRY_INTERVAL_MS, onAttem
   }
 }
 
-export default { probeHealth, pollUntilHealthy }
+export default { probeHealth, pollUntilHealthy, RETRY_INTERVAL_MS }

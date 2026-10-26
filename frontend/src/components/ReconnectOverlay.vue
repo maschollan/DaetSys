@@ -1,14 +1,20 @@
 <script>
+import ConnectionVisual from '@/components/connection/ConnectionVisual.vue'
 import useConnectionStore from '@/stores/connection'
 import useUiStore from '@/stores/ui'
 
 /*
  * Overlay mid-session saat server (Render free tier) tidur di tengah
  * pemakaian: axios menandai offline, loop recovery di store connection
- * menutupnya kembali begitu /health merespons 200.
+ * menutupnya kembali begitu /health merespons 200. Animasinya dari
+ * ConnectionVisual (varian sama dengan BootScreen).
  */
 export default {
   name: 'ReconnectOverlay',
+
+  components: {
+    ConnectionVisual,
+  },
 
   data() {
     return {
@@ -30,12 +36,9 @@ export default {
 <template>
   <Transition name="ds-fade">
     <div v-if="connection.offline" class="ds-reconnect-overlay" role="status" aria-live="polite">
-      <span class="ds-reconnect-brand">&gt;_</span>
-      <p class="ds-reconnect-text">
-        Reconnecting to server<span class="ds-dots"
-          ><span>.</span><span>.</span><span>.</span></span
-        >
-      </p>
+      <span class="ds-reconnect-brand">>_</span>
+      <span class="ds-reconnect-title">DAETSYS</span>
+      <ConnectionVisual label="Reconnecting to server" :attempts="connection.attempts" />
     </div>
   </Transition>
 </template>
@@ -65,11 +68,11 @@ export default {
   letter-spacing: 0.05em;
 }
 
-.ds-reconnect-text {
-  margin: 0;
-  color: var(--ds-muted);
-  font-size: 0.9rem;
-  letter-spacing: 0.04em;
+.ds-reconnect-title {
+  color: var(--ds-text);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
 }
 
 .ds-fade-enter-active,

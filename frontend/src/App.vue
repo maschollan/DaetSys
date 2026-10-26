@@ -20,18 +20,24 @@ export default {
   data() {
     return {
       serverReady: false,
+      /** Nomor percobaan health probe saat preload (kanal ke BootScreen). */
+      attempts: 0,
     }
   },
 
   async mounted() {
-    await pollUntilHealthy()
+    await pollUntilHealthy({
+      onAttempt: (attempt) => {
+        this.attempts = attempt
+      },
+    })
     this.serverReady = true
   },
 }
 </script>
 
 <template>
-  <BootScreen v-if="!serverReady" />
+  <BootScreen v-if="!serverReady" :attempts="attempts" />
   <template v-else>
     <ReconnectOverlay />
     <RouterView />

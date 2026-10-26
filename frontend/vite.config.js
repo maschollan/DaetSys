@@ -16,12 +16,14 @@ export default defineConfig({
     },
   },
   server: {
-    // Khusus development: proxy /api ke API produksi supaya origin
-    // localhost tidak diblokir CORS (backend hanya menerima origin
-    // FRONTEND_URL yang terdaftar, yaitu domain production).
+    // Khusus development: request relatif "/api" di-proxy ke Laravel lokal
+    // (php artisan serve di port 8000) supaya origin localhost tidak
+    // diblokir CORS (backend hanya menerima origin FRONTEND_URL yang
+    // terdaftar). Pairing dengan .env dev: VITE_API_BASE_URL=/api.
+    // API produksi tetap dipakai lewat .env.production saat build.
     proxy: {
       '/api': {
-        target: 'https://daetsysapi.onrender.com',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

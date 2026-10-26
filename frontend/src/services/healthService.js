@@ -5,8 +5,14 @@ import { API_BASE_URL } from '@/constants/api'
 /** Jeda antar percobaan health probe (ms). */
 const RETRY_INTERVAL_MS = 3000
 
-/** Timeout satu probe — longgar untuk jaringan lambat tanpa memanjangkan siklus polling. */
-const PROBE_TIMEOUT_MS = 10000
+/*
+ * Timeout satu probe. Sejalan dengan interval (3s) supaya satu siklus
+ * gagal tetap ~3 detik; sebelumnya 10s membuat siklus terasa 13 detik.
+ * Server yang benar-benar jalan biasanya merespons jauh lebih cepat, dan
+ * bila probe lambat gagal karena jaringan, siklus berikutnya otomatis
+ * mencoba lagi (tanpa batas percobaan).
+ */
+const PROBE_TIMEOUT_MS = 3000
 
 const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
@@ -31,12 +37,20 @@ export async function probeHealth() {
 
 /**
  * Polling health hingga server merespons 200. Retry bersifat otomatis
- * tanpa batas percobaan: free tier Render bisa mengalami cold start jauh
- * lebih lama dari satu dua kali coba, jadi pemanggil (gate preload di
- * App.vue atau store connection) cukup menunggu Promise ini selesai.
+ * tanpa batas percobaan (interval + timeout probe ≈ 3s per siklus):
+ * free tier Render bisa mengalami cold start jauh lebih lama dari satu
+ * dua kali coba, jadi pemanggil (gate preload di App.vue atau store
+ * connection) cukup menunggu Promise ini selesai.
+ *
+ * `onAttempt(n)` — opsional; dipanggil sebelum tiap percobaan (mulai 1)
+ * agar UI seperti ConnectionVisual bisa menampilkan "percobaan #n".
  */
-export async function pollUntilHealthy({ intervalMs = RETRY_INTERVAL_MS } = {}) {
-  for (;;) {
+export async function pollUntilHealthy({ intervalMs = RETRY_INTERVAL_MS, onAttempt } = {}) {
+  for (let attempt = 1; ; attempt++) {
+    if (typeof onAttempt === 'function') {
+      onAttempt(attempt)
+    }
+
     if (await probeHealth()) {
       return true
     }

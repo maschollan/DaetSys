@@ -1,5 +1,8 @@
 import axios from 'axios'
 
+import { API_BASE_URL } from '@/constants/api'
+import useConnectionStore from '@/stores/connection'
+
 export const TOKEN_STORAGE_KEY = 'daetsys.token'
 export const TOKEN_EXPIRY_STORAGE_KEY = 'daetsys.token_expires_at'
 
@@ -58,7 +61,7 @@ export function writeToken(token) {
 }
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
     Accept: 'application/json',
@@ -86,6 +89,16 @@ http.interceptors.response.use(
     // ke halaman login.
     if (status === 401 && requestUrl !== '/login') {
       writeToken(null)
+    }
+
+    // Fault jaringan/server (tanpa respons, timeout, atau 502/503/504 —
+    // kode khas Render saat instance tidur/di-spin up) menandai app
+    // offline: overlay Reconnecting muncul dan health polling berjalan
+    // sampai 200. Kode lain (401/422/429) dibuktikan server hidup, jadi
+    // tidak memicu mode offline.
+    const isServerFault = !status || status === 502 || status === 503 || status === 504
+    if (isServerFault) {
+      useConnectionStore().goOffline()
     }
 
     return Promise.reject(error)

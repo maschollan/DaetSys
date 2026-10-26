@@ -21,10 +21,145 @@
       #nl-badge-frame {
         display: none !important;
       }
+
+      /*
+       * Splash preload — tampil instan sebelum bundle JS selesai dimuat,
+       * lalu tertimpa Vue saat mount (BootScreen mengambil alih sampai
+       * /api/health merespons 200). Struktur kelas identik dengan
+       * styles/index.css; palet literal mengikuti tokens.css.
+       */
+      .boot-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        gap: 0.25rem;
+        padding: 1rem;
+        /* background: #f1f7f5; */
+        color: #13231f;
+      }
+
+      .boot-brand {
+        color: #0d9488;
+        font-weight: 700;
+        font-size: 1.15rem;
+        letter-spacing: 0.05em;
+        animation: ds-boot-pulse 1.5s ease-in-out infinite;
+      }
+
+      .boot-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.18em;
+      }
+
+      .boot-status {
+        margin: 0.4rem 0 0;
+        color: #566f6a;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+      }
+
+      [data-bs-theme='dark'] .boot-screen {
+        background: #0a1714;
+        color: #dcebe7;
+      }
+
+      [data-bs-theme='dark'] .boot-brand {
+        color: #14b8a6;
+      }
+
+      [data-bs-theme='dark'] .boot-status {
+        color: #8ca69f;
+      }
+
+      @keyframes ds-boot-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.55;
+        }
+      }
+
+      .ds-dots {
+        display: inline-block;
+        min-width: 1.8em;
+        text-align: left;
+      }
+
+      .ds-dots > span {
+        display: inline-block;
+        opacity: 0;
+        animation: ds-dot-1 1.5s infinite;
+      }
+
+      .ds-dots > span:nth-child(2) {
+        animation-name: ds-dot-2;
+      }
+
+      .ds-dots > span:nth-child(3) {
+        animation-name: ds-dot-3;
+      }
+
+      @keyframes ds-dot-1 {
+        0%,
+        24% {
+          opacity: 0;
+        }
+        25%,
+        94% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes ds-dot-2 {
+        0%,
+        49% {
+          opacity: 0;
+        }
+        50%,
+        94% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes ds-dot-3 {
+        0%,
+        74% {
+          opacity: 0;
+        }
+        75%,
+        94% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
     </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- Splash preload: digantikan Vue saat mount. -->
+      <div class="boot-screen">
+        <span class="boot-brand">&gt;_</span>
+        <span class="boot-title">DAETSYS</span>
+        <p class="boot-status">
+          Connecting to server<span class="ds-dots"
+            ><span>.</span><span>.</span><span>.</span></span
+          >
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

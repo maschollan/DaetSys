@@ -15,4 +15,15 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    // Khusus development: proxy /api ke API produksi supaya origin
+    // localhost tidak diblokir CORS (backend hanya menerima origin
+    // FRONTEND_URL yang terdaftar, yaitu domain production).
+    proxy: {
+      '/api': {
+        target: 'https://daetsysapi.onrender.com',
+        changeOrigin: true,
+      },
+    },
+  },
 })
